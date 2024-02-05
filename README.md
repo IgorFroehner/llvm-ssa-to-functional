@@ -12,6 +12,16 @@ stack build
 stack ghci
 ```
 
+#### Some tries on GHCi
+
+```haskell
+runAlex "%1 = call @asdf()" parseLLVMIR
+```
+
+```haskell
+runAlex "call @asdf()" parseLLVMIR
+```
+
 # TODO:
 
 - [ ] accept float constants as hex
