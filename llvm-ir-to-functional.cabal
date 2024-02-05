@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lexer
       Lib
+      Parser
   other-modules:
       Paths_llvm_ir_to_functional
   autogen-modules:

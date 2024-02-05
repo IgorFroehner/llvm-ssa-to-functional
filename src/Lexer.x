@@ -33,15 +33,18 @@ tokens :-
 <0> ";" .*  ;
 
 -- Keywords
-<0> define  { tok Define }
-<0> declare { tok Declare }
-<0> ret     { tok Return }
-<0> type    { tok TypeDef }
-<0> phi     { tok Phi }
-<0> call    { tok Call }
-<0> br      { tok Br }
-<0> add     { tok Add }
-<0> icmp    { tok Icmp }
+<0> define        { tok Define }
+<0> declare       { tok Declare }
+<0> ret           { tok Return }
+<0> type          { tok Typedef }
+<0> phi           { tok Phi }
+<0> call          { tok Call }
+<0> br            { tok Br }
+<0> add           { tok Add }
+<0> icmp          { tok Icmp }
+<0> store         { tok Store }
+<0> load          { tok Load }
+<0> getelementptr { tok GetElementPtr }
 
 -- Markers / Operators
 <0> "="     { tok Assign }
@@ -70,9 +73,12 @@ tokens :-
 
 <0> (eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle) { tokCmp }
 
-
 -- Ignore for now
 <0> "#"$digit+         ;
+<0> attributes .*      ;
+<0> private            ;
+<0> align              ;
+<0> inbounds           ;
 <0> nsw                ;
 <0> nuw                ;
 <0> tail               ;
@@ -116,12 +122,15 @@ data Token
   | Define
   | Declare
   | Return
-  | TypeDef
+  | Typedef
   | Phi
   | Call
   | Br
-  | Icmp
   | Add
+  | Icmp
+  | Store
+  | Load
+  | GetElementPtr
   -- Basic block
   | BasicBlock ByteString
   -- Markers

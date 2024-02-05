@@ -1,0 +1,20 @@
+
+idetifier: anything after a % or a @
+op_call: one of the possible operations: call, phi, ...
+
+op_call = phi
+
+name :=
+    identifier
+
+parameters :=
+
+operation := 
+    op_call parameters
+
+assignment :=
+    name '=' operation
+
+block :=
+    operation '\n' block
+    assignment '\n' block
