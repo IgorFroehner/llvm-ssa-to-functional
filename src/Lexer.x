@@ -23,11 +23,14 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 $digit = [0-9]
 $alpha = [a-zA-Z]
 
+$my_white = [\ \t]
+$new_line = [\n]
+
 @id = [\%\@][a-zA-Z0-9\_\$][a-zA-Z0-9\_\$\.]* -- This covers named and unnamed, global or local identifiers
 
 tokens :-
 
-<0> $white+ ;
+<0> $my_white+ ;
 
 -- Comment
 <0> ";" .*  ;
@@ -47,14 +50,15 @@ tokens :-
 <0> getelementptr { tok GetElementPtr }
 
 -- Markers / Operators
-<0> "="     { tok Assign }
-<0> "{"     { tok LCurlyBracket }
-<0> "}"     { tok RCurlyBracket }
-<0> "("     { tok LPar }
-<0> ")"     { tok RPar }
-<0> "["     { tok LBrack }
-<0> "]"     { tok RBrack }
-<0> ","     { tok Comma }
+<0> "="         { tok Assign }
+<0> "{"         { tok LCurlyBracket }
+<0> "}"         { tok RCurlyBracket }
+<0> "("         { tok LPar }
+<0> ")"         { tok RPar }
+<0> "["         { tok LBrack }
+<0> "]"         { tok RBrack }
+<0> ","         { tok Comma }
+<0> $new_line   { tok EndOfLine }
 
 -- Beginning of a block
 <0> ($alpha | $digit )+ ":" { tokBasicBlock }
@@ -142,6 +146,7 @@ data Token
   | LBrack
   | RBrack
   | Comma
+  | EndOfLine
   -- Comparison kinds
   | Cmp ByteString
   -- EOF

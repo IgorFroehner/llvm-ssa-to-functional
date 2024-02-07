@@ -24,7 +24,8 @@ import qualified Lexer as L
   string     { L.RangedToken (L.String _) _ }
   integer    { L.RangedToken (L.Integer _) _ }
 -- Type
-  type       { L.RangedToken (L.Type _) _ }  
+  type       { L.RangedToken (L.Type _) _ }
+  'void'     { L.RangedToken (L.Type _) _ }
 -- Keywords
   define     { L.RangedToken L.Define _ }
   declare    { L.RangedToken L.Declare _ }
@@ -49,23 +50,61 @@ import qualified Lexer as L
   '['       { L.RangedToken L.LBrack _ }
   ']'       { L.RangedToken L.RBrack _ }
   ','       { L.RangedToken L.Comma _ }
+  '\n'      { L.RangedToken L.EndOfLine _ }
   -- Comparison kinds
   cmp       { L.RangedToken (L.Cmp _) _ }
 
 %%
 
+program :: { [Function L.Range] }
+  : program funcDef { $1 ++ [$2] } 
+  | funcDef { [$1] }
+  | program funcDec { $1 ++ [$2] }
+  | funcDec { [$1] }
+
+funcDef :: { Function L.Range }
+  : define name '(' ')' '{' '\n' stmts '}'               { FunctionDef (L.rtRange $1 <-> L.rtRange $8) Nothing $2 $7 }
+  | define name '(' ')' '{' '\n' '}'                     { FunctionDef (L.rtRange $1 <-> L.rtRange $6) Nothing $2 [] }
+  | define typeAnotation name '(' ')' '{' '\n' stmts '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) (Just $2) $3 $8 }
+  | define typeAnotation name '(' ')' '{' '\n' '}'       { FunctionDef (L.rtRange $1 <-> L.rtRange $6) (Just $2) $3 [] }
+
+funcDec :: { Function L.Range }
+  : declare typeAnotation name '(' ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $5) (Just $2) $3 }
+  | declare name '(' ')'               { FunctionDec (L.rtRange $1 <-> L.rtRange $4) Nothing $2 }
+
+stmts :: { [Stmt L.Range] }
+  : stmts stmt { $1 ++ [$2] }
+  | stmt       { [$1] }
+
 stmt :: { Stmt L.Range }
-  : funcCall           { SCall $1 }
-  | dec                { SDec $1 }
+  : funcCall '\n' { SCall $1 }
+  | dec '\n'      { SDec $1 }
+  | ret '\n'      { SReturn $1 }
 
 name :: { Name L.Range }
   : identifier { unTok $1 (\range (L.Identifier name) -> Name range name) }
+
+integerValue :: { IntegerValue L.Range }
+  : integer { unTok $1 (\range (L.Integer value) -> IntegerValue range value) }
+
+typeAnotation :: { Type L.Range }
+  : type { unTok $1 (\range (L.Type typeName) -> Type range typeName) }
 
 dec :: { Dec L.Range }
   : name '=' funcCall { Dec (info $1 <-> info $3) $1 $3 }
 
 funcCall :: { Call L.Range }
-  : call name '(' ')' { unTok $1 (\range _ -> Call range $2 []) }
+  : call name '(' ')'                { unTok $1 (\range _ -> Call range Nothing $2 []) }
+  | call typeAnotation name '(' ')'  { unTok $1 (\range _ -> Call range (Just $2) $3 []) }
+
+ret :: { Return L.Range }
+  : return value                     { Return (L.rtRange $1 <-> info $2) Nothing (Just $2) }
+  | return typeAnotation value       { Return (L.rtRange $1 <-> info $3) (Just $2) (Just $3) }
+  | return 'void'                    { Return (L.rtRange $1 <-> L.rtRange $2) (Just (Type (L.rtRange $2) "void")) Nothing }
+
+value :: { Value L.Range }
+  : name { ValueName $1 }
+  | integerValue { ValueInt $1 }
 
 {
 parseError :: L.RangedToken -> L.Alex a
@@ -97,12 +136,25 @@ data Name a
   = Name a ByteString
   deriving (Foldable, Show)
 
+data IntegerValue a
+  = IntegerValue a Integer
+  deriving (Foldable, Show)
+
+data Value a
+  = ValueInt (IntegerValue a)
+  | ValueName (Name a)
+  deriving (Foldable, Show)
+
 data Type a
-  = TVar a (Name a)
+  = Type a ByteString
   deriving (Foldable, Show)
 
 data Call a
-  = Call a (Name a) [Argument a]
+  = Call a (Maybe (Type a)) (Name a) [Argument a]
+  deriving (Foldable, Show)
+
+data Return a
+  = Return a (Maybe (Type a)) (Maybe (Value a))
   deriving (Foldable, Show)
 
 data Argument a
@@ -113,8 +165,22 @@ data Dec a
   = Dec a (Name a) (Call a)
   deriving (Foldable, Show)
 
+data Function a
+  = FunctionDef a (Maybe (Type a)) (Name a) [Stmt a]
+  | FunctionDec a (Maybe (Type a)) (Name a)
+  deriving (Foldable, Show)
+
+-- data FunctionDef a
+--   = FunctionDef a (Maybe (Type a)) (Name a) [Stmt a]
+--   deriving (Foldable, Show)
+
+-- data FunctionDec a
+--   = FunctionDec a (Maybe (Type a)) (Name a)
+--   deriving (Foldable, Show)
+
 data Stmt a
   = SDec (Dec a)
   | SCall (Call a)
+  | SReturn (Return a)
   deriving (Foldable, Show)
 }
