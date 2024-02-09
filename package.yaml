@@ -56,6 +56,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - llvm-ir-to-functional
+    - bytestring
 
 tests:
   llvm-ir-to-functional-test:

@@ -23,14 +23,12 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 $digit = [0-9]
 $alpha = [a-zA-Z]
 
-$my_white = [\ \t]
-$new_line = [\n]
-
-@id = [\%\@][a-zA-Z0-9\_\$][a-zA-Z0-9\_\$\.]* -- This covers named and unnamed, global or local identifiers
+@global_id = [\@][a-zA-Z0-9\_\$][a-zA-Z0-9\_\$\.]* -- This covers named and unnamed, global or local identifiers
+@local_id = [\%][a-zA-Z0-9\_\$][a-zA-Z0-9\_\$\.]* -- This covers named and unnamed, local identifiers
 
 tokens :-
 
-<0> $my_white+ ;
+<0> $white+ ;
 
 -- Comment
 <0> ";" .*  ;
@@ -58,13 +56,13 @@ tokens :-
 <0> "["         { tok LBrack }
 <0> "]"         { tok RBrack }
 <0> ","         { tok Comma }
-<0> $new_line   { tok EndOfLine }
 
 -- Beginning of a block
 <0> ($alpha | $digit )+ ":" { tokBasicBlock }
 
 -- Identifiers
-<0> @id     { tokId }
+<0> @global_id     { tokGlobalId }
+<0> @local_id      { tokLocalId }
 
 -- Types, handling this way for now because I don't know how we're gonna use this
 <0> (void | label | i$digit+ | half | float | double | fp128 | ptr) { tokType }
@@ -90,6 +88,7 @@ tokens :-
 <0> noundef            ;
 <0> local_unnamed_addr ;
 <0> int                ;
+<0> returned           ;
 
 {
 data AlexUserState = AlexUserState
@@ -116,7 +115,8 @@ data RangedToken = RangedToken
 
 data Token
   -- Identifiers
-  = Identifier ByteString
+  = GIdentifier ByteString
+  | LIdentifier ByteString
   -- Constants
   | String ByteString
   | Integer Integer
@@ -146,7 +146,6 @@ data Token
   | LBrack
   | RBrack
   | Comma
-  | EndOfLine
   -- Comparison kinds
   | Cmp ByteString
   -- EOF
@@ -165,12 +164,20 @@ tok ctor inp len =
     , rtRange = mkRange inp len
     }
 
-tokId :: AlexAction RangedToken
-tokId inp@(_, _, str, _) len =
+tokGlobalId :: AlexAction RangedToken
+tokGlobalId inp@(_, _, str, _) len =
   pure RangedToken
-    { rtToken = Identifier $ BS.take len str
+    { rtToken = GIdentifier $ BS.take len str
     , rtRange = mkRange inp len
     }
+
+tokLocalId :: AlexAction RangedToken
+tokLocalId inp@(_, _, str, _) len =
+  pure RangedToken
+    { rtToken = LIdentifier $ BS.take len str
+    , rtRange = mkRange inp len
+    }
+
 
 tokInteger :: AlexAction RangedToken
 tokInteger inp@(_, _, str, _) len =

@@ -19,7 +19,8 @@ import qualified Lexer as L
 
 %token
 -- Identifiers
-  identifier { L.RangedToken (L.Identifier _) _ }
+  gidentifier { L.RangedToken (L.GIdentifier _) _ }
+  lidentifier { L.RangedToken (L.LIdentifier _) _ }
 -- Constants
   string     { L.RangedToken (L.String _) _ }
   integer    { L.RangedToken (L.Integer _) _ }
@@ -50,61 +51,90 @@ import qualified Lexer as L
   '['       { L.RangedToken L.LBrack _ }
   ']'       { L.RangedToken L.RBrack _ }
   ','       { L.RangedToken L.Comma _ }
-  '\n'      { L.RangedToken L.EndOfLine _ }
   -- Comparison kinds
   cmp       { L.RangedToken (L.Cmp _) _ }
 
 %%
 
+-- Top Level Productions
 program :: { [Function L.Range] }
   : program funcDef { $1 ++ [$2] } 
-  | funcDef { [$1] }
+  | funcDef         { [$1] }
   | program funcDec { $1 ++ [$2] }
-  | funcDec { [$1] }
+  | funcDec         { [$1] }
 
+-- Funciton Definitions
 funcDef :: { Function L.Range }
-  : define name '(' ')' '{' '\n' stmts '}'               { FunctionDef (L.rtRange $1 <-> L.rtRange $8) Nothing $2 $7 }
-  | define name '(' ')' '{' '\n' '}'                     { FunctionDef (L.rtRange $1 <-> L.rtRange $6) Nothing $2 [] }
-  | define typeAnotation name '(' ')' '{' '\n' stmts '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) (Just $2) $3 $8 }
-  | define typeAnotation name '(' ')' '{' '\n' '}'       { FunctionDef (L.rtRange $1 <-> L.rtRange $6) (Just $2) $3 [] }
+  : define typeAnotation gname '(' arguments ')' '{' stmts '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) $2 $3 $5 $8 }
+  | define typeAnotation gname '(' arguments ')' '{' '}'       { FunctionDef (L.rtRange $1 <-> L.rtRange $8) $2 $3 $5 [] }
 
 funcDec :: { Function L.Range }
-  : declare typeAnotation name '(' ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $5) (Just $2) $3 }
-  | declare name '(' ')'               { FunctionDec (L.rtRange $1 <-> L.rtRange $4) Nothing $2 }
+  : declare typeAnotation gname '(' arguments ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $6) $2 $3 $5 }
 
+arguments :: { [Argument L.Range] }
+  : arguments ',' argument           { $1 ++ [$3] }
+  | argument                         { [$1] }
+  |                                  { [] }
+
+argument :: { Argument L.Range }
+  : typeAnotation lname              { Argument (info $1 <-> info $2) $1 $2 }
+
+-- Statements
 stmts :: { [Stmt L.Range] }
-  : stmts stmt { $1 ++ [$2] }
-  | stmt       { [$1] }
+  : stmts stmt                       { $1 ++ [$2] }
+  | stmt                             { [$1] }
 
 stmt :: { Stmt L.Range }
-  : funcCall '\n' { SCall $1 }
-  | dec '\n'      { SDec $1 }
-  | ret '\n'      { SReturn $1 }
+  : funcCall                         { SCall $1 }
+  | dec                              { SDec $1 }
+  | ret                              { SReturn $1 }
+  | phiCall                          { SPhi $1 }
+  | icmpCall                         { SIcmp $1 }
 
-name :: { Name L.Range }
-  : identifier { unTok $1 (\range (L.Identifier name) -> Name range name) }
+-- Variables and Values
+
+-- Local names are prefixed with a '%'.
+lname :: { Name L.Range }
+  : lidentifier                      { unTok $1 (\range (L.LIdentifier name) -> LName range name) }
+
+-- Global names are prefixed with a '@'.
+gname :: { Name L.Range }
+  : gidentifier                      { unTok $1 (\range (L.GIdentifier name) -> GName range name) }
 
 integerValue :: { IntegerValue L.Range }
-  : integer { unTok $1 (\range (L.Integer value) -> IntegerValue range value) }
-
-typeAnotation :: { Type L.Range }
-  : type { unTok $1 (\range (L.Type typeName) -> Type range typeName) }
-
-dec :: { Dec L.Range }
-  : name '=' funcCall { Dec (info $1 <-> info $3) $1 $3 }
-
-funcCall :: { Call L.Range }
-  : call name '(' ')'                { unTok $1 (\range _ -> Call range Nothing $2 []) }
-  | call typeAnotation name '(' ')'  { unTok $1 (\range _ -> Call range (Just $2) $3 []) }
-
-ret :: { Return L.Range }
-  : return value                     { Return (L.rtRange $1 <-> info $2) Nothing (Just $2) }
-  | return typeAnotation value       { Return (L.rtRange $1 <-> info $3) (Just $2) (Just $3) }
-  | return 'void'                    { Return (L.rtRange $1 <-> L.rtRange $2) (Just (Type (L.rtRange $2) "void")) Nothing }
+  : integer                          { unTok $1 (\range (L.Integer value) -> IntegerValue range value) }
 
 value :: { Value L.Range }
-  : name { ValueName $1 }
+  : lname        { ValueName $1 }
   | integerValue { ValueInt $1 }
+
+typeAnotation :: { Type L.Range }
+  : type                             { unTok $1 (\range (L.Type typeName) -> Type range typeName) }
+
+-- Operations
+
+dec :: { Dec L.Range }
+  : lname '=' funcCall               { Dec (info $1 <-> info $3) $1 $3 }
+
+funcCall :: { Call L.Range }
+  : call typeAnotation gname '(' ')' { unTok $1 (\range _ -> Call range $2 $3 []) }
+
+phiCall :: { Phi L.Range }
+  : lname '=' phi typeAnotation phiArguments { Phi (info $1 <-> info $4) $1 $4 $5 }
+
+phiArguments :: { [(Value L.Range, Name L.Range)] }
+  : phiArguments ',' '[' value ',' lname ']' { $1 ++ [($4, $6)] }
+  | '[' value ',' lname ']'                  { [($2, $4)] }
+
+ret :: { Return L.Range }
+  : return typeAnotation value       { Return (L.rtRange $1 <-> info $3) $2 (Just $3) }
+  | return 'void'                    { Return (L.rtRange $1 <-> L.rtRange $2) (Type (L.rtRange $2) "void") Nothing }
+
+icmpCall :: { Icmp L.Range }
+  : icmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
+
+cmpDef :: { Cmp L.Range }
+  : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range cmp) }
 
 {
 parseError :: L.RangedToken -> L.Alex a
@@ -133,7 +163,8 @@ L.Range a1 _ <-> L.Range _ b2 = L.Range a1 b2
 -- * AST
 
 data Name a
-  = Name a ByteString
+  = LName a ByteString
+  | GName a ByteString
   deriving (Foldable, Show)
 
 data IntegerValue a
@@ -150,15 +181,15 @@ data Type a
   deriving (Foldable, Show)
 
 data Call a
-  = Call a (Maybe (Type a)) (Name a) [Argument a]
+  = Call a (Type a) (Name a) [Argument a]
   deriving (Foldable, Show)
 
 data Return a
-  = Return a (Maybe (Type a)) (Maybe (Value a))
+  = Return a (Type a) (Maybe (Value a))
   deriving (Foldable, Show)
 
 data Argument a
-  = Argument a (Name a) (Maybe (Type a))
+  = Argument a (Type a) (Name a)
   deriving (Foldable, Show)
 
 data Dec a
@@ -166,21 +197,27 @@ data Dec a
   deriving (Foldable, Show)
 
 data Function a
-  = FunctionDef a (Maybe (Type a)) (Name a) [Stmt a]
-  | FunctionDec a (Maybe (Type a)) (Name a)
+  = FunctionDef a (Type a) (Name a) [(Argument a)] [Stmt a]
+  | FunctionDec a (Type a) (Name a) [(Argument a)]
   deriving (Foldable, Show)
 
--- data FunctionDef a
---   = FunctionDef a (Maybe (Type a)) (Name a) [Stmt a]
---   deriving (Foldable, Show)
+data Phi a
+  = Phi a (Name a) (Type a) [(Value a, Name a)]
+  deriving (Foldable, Show)
 
--- data FunctionDec a
---   = FunctionDec a (Maybe (Type a)) (Name a)
---   deriving (Foldable, Show)
+data Icmp a
+  = Icmp a (Cmp a) (Type a) (Value a) (Value a)
+  deriving (Foldable, Show)
+
+data Cmp a
+  = Cmp a ByteString
+  deriving (Foldable, Show)
 
 data Stmt a
   = SDec (Dec a)
   | SCall (Call a)
   | SReturn (Return a)
+  | SPhi (Phi a)  
+  | SIcmp (Icmp a)
   deriving (Foldable, Show)
 }

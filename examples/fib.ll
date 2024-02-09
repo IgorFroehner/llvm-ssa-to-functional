@@ -1,4 +1,4 @@
-define dso_local noundef i32 @fib(int)(i32 noundef %0) local_unnamed_addr #0 {
+define dso_local noundef i32 @fib(i32 noundef %0) local_unnamed_addr #0 {
   %2 = icmp eq i32 %0, 0
   br i1 %2, label %10, label %3
 
