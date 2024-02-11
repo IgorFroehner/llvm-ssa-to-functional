@@ -26,7 +26,8 @@ import qualified Lexer as L
   integer    { L.RangedToken (L.Integer _) _ }
 -- Type
   type       { L.RangedToken (L.Type _) _ }
-  'void'     { L.RangedToken (L.Type _) _ }
+  void       { L.RangedToken (L.Type _) _ }
+  i1         { L.RangedToken (L.Type _) _ }
 -- Keywords
   define     { L.RangedToken L.Define _ }
   declare    { L.RangedToken L.Declare _ }
@@ -88,8 +89,7 @@ stmt :: { Stmt L.Range }
   : funcCall                         { SCall $1 }
   | dec                              { SDec $1 }
   | ret                              { SReturn $1 }
-  | phiCall                          { SPhi $1 }
-  | icmpCall                         { SIcmp $1 }
+  | brCall                           { SBr $1 }
 
 -- Variables and Values
 
@@ -114,13 +114,16 @@ typeAnotation :: { Type L.Range }
 -- Operations
 
 dec :: { Dec L.Range }
-  : lname '=' funcCall               { Dec (info $1 <-> info $3) $1 $3 }
+  : lname '=' funcCall               { DecCall (info $1 <-> info $3) $1 $3 }
+  | lname '=' icmpCall               { DecIcmp (info $1 <-> info $3) $1 $3 }
+  | lname '=' phiCall                { DecPhi (info $1 <-> info $3) $1 $3 }
+  | lname '=' addCall                { DecAdd (info $1 <-> info $3) $1 $3 }
 
 funcCall :: { Call L.Range }
   : call typeAnotation gname '(' ')' { unTok $1 (\range _ -> Call range $2 $3 []) }
 
 phiCall :: { Phi L.Range }
-  : lname '=' phi typeAnotation phiArguments { Phi (info $1 <-> info $4) $1 $4 $5 }
+  : phi typeAnotation phiArguments { Phi (L.rtRange $1 <-> info $2) $2 $3 }
 
 phiArguments :: { [(Value L.Range, Name L.Range)] }
   : phiArguments ',' '[' value ',' lname ']' { $1 ++ [($4, $6)] }
@@ -128,13 +131,19 @@ phiArguments :: { [(Value L.Range, Name L.Range)] }
 
 ret :: { Return L.Range }
   : return typeAnotation value       { Return (L.rtRange $1 <-> info $3) $2 (Just $3) }
-  | return 'void'                    { Return (L.rtRange $1 <-> L.rtRange $2) (Type (L.rtRange $2) "void") Nothing }
+  | return void                      { Return (L.rtRange $1 <-> L.rtRange $2) (Type (L.rtRange $2) "void") Nothing }
 
 icmpCall :: { Icmp L.Range }
   : icmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
 
 cmpDef :: { Cmp L.Range }
   : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range cmp) }
+
+brCall :: { Br L.Range }
+  : br typeAnotation value ',' typeAnotation lname ',' typeAnotation lname { Br (L.rtRange $1 <-> info $9) $3 $5 $6 $8 $9 }
+
+addCall :: { Add L.Range }
+  : add typeAnotation value ',' value { Add (L.rtRange $1 <-> info $5) $2 $3 $5 }
 
 {
 parseError :: L.RangedToken -> L.Alex a
@@ -193,7 +202,10 @@ data Argument a
   deriving (Foldable, Show)
 
 data Dec a
-  = Dec a (Name a) (Call a)
+  = DecCall a (Name a) (Call a)
+  | DecIcmp a (Name a) (Icmp a)
+  | DecPhi a (Name a) (Phi a)
+  | DecAdd a (Name a) (Add a)
   deriving (Foldable, Show)
 
 data Function a
@@ -202,7 +214,7 @@ data Function a
   deriving (Foldable, Show)
 
 data Phi a
-  = Phi a (Name a) (Type a) [(Value a, Name a)]
+  = Phi a (Type a) [(Value a, Name a)]
   deriving (Foldable, Show)
 
 data Icmp a
@@ -213,11 +225,18 @@ data Cmp a
   = Cmp a ByteString
   deriving (Foldable, Show)
 
+data Br a
+  = Br a (Value a) (Type a) (Name a) (Type a) (Name a)
+  deriving (Foldable, Show)
+
+data Add a
+  = Add a (Type a) (Value a) (Value a)
+  deriving (Foldable, Show)
+
 data Stmt a
   = SDec (Dec a)
   | SCall (Call a)
   | SReturn (Return a)
-  | SPhi (Phi a)  
-  | SIcmp (Icmp a)
+  | SBr (Br a)
   deriving (Foldable, Show)
 }
