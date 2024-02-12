@@ -72,13 +72,13 @@ funcDef :: { Function L.Range }
 funcDec :: { Function L.Range }
   : declare typeAnotation gname '(' arguments ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $6) $2 $3 $5 }
 
-arguments :: { [Argument L.Range] }
+arguments :: { [ArgumentDef L.Range] }
   : arguments ',' argument           { $1 ++ [$3] }
   | argument                         { [$1] }
   |                                  { [] }
 
-argument :: { Argument L.Range }
-  : typeAnotation lname              { Argument (info $1 <-> info $2) $1 $2 }
+argument :: { ArgumentDef L.Range }
+  : typeAnotation lname              { ArgumentDef (info $1 <-> info $2) $1 $2 }
 
 -- Statements
 stmts :: { [Stmt L.Range] }
@@ -120,7 +120,15 @@ dec :: { Dec L.Range }
   | lname '=' addCall                { DecAdd (info $1 <-> info $3) $1 $3 }
 
 funcCall :: { Call L.Range }
-  : call typeAnotation gname '(' ')' { unTok $1 (\range _ -> Call range $2 $3 []) }
+  : call typeAnotation gname '(' funcCallArguments ')' { unTok $1 (\range _ -> Call range $2 $3 $5) }
+
+funcCallArguments :: { [CallArgument L.Range] }
+  : funcCallArguments ',' funcCallArgument      { $1 ++ [$3] }
+  | funcCallArgument                            { [$1] }
+  |                                             { [] }
+
+funcCallArgument :: { CallArgument L.Range }
+  : typeAnotation value               { CallArgument (info $1 <-> info $2) $1 $2 }
 
 phiCall :: { Phi L.Range }
   : phi typeAnotation phiArguments { Phi (L.rtRange $1 <-> info $2) $2 $3 }
@@ -190,15 +198,19 @@ data Type a
   deriving (Foldable, Show)
 
 data Call a
-  = Call a (Type a) (Name a) [Argument a]
+  = Call a (Type a) (Name a) [CallArgument a]
+  deriving (Foldable, Show)
+
+data CallArgument a
+  = CallArgument a (Type a) (Value a)
   deriving (Foldable, Show)
 
 data Return a
   = Return a (Type a) (Maybe (Value a))
   deriving (Foldable, Show)
 
-data Argument a
-  = Argument a (Type a) (Name a)
+data ArgumentDef a
+  = ArgumentDef a (Type a) (Name a)
   deriving (Foldable, Show)
 
 data Dec a
@@ -209,8 +221,8 @@ data Dec a
   deriving (Foldable, Show)
 
 data Function a
-  = FunctionDef a (Type a) (Name a) [(Argument a)] [Stmt a]
-  | FunctionDec a (Type a) (Name a) [(Argument a)]
+  = FunctionDef a (Type a) (Name a) [(ArgumentDef a)] [Stmt a]
+  | FunctionDec a (Type a) (Name a) [(ArgumentDef a)]
   deriving (Foldable, Show)
 
 data Phi a
