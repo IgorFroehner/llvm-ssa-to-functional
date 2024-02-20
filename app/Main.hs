@@ -12,15 +12,22 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
-        [] -> putStrLn "Usage: stack run -- <file>"
+        ("--ast":file:_) -> do
+            -- Handle the case when '--ast' option is provided
+            s <- BL.readFile file
+            case runAlex s parseLLVMIR of
+                Left err -> putStrLn err
+                Right ast -> print (goOverProgram ast)
         (file:_) -> do
             s <- BL.readFile file
             print $ runAlex s parseLLVMIR
-            -- case runAlex s parseLLVMIR of
-            --     Left err -> putStrLn err
-            --     Right ast -> writeFile "output.dot" (goOverProgram ast)
+            case runAlex s parseLLVMIR of
+                Left err -> putStrLn err
+                Right ast -> print ast
+        [] -> putStrLn "Usage: stack run -- <file>"
 
--- goOverProgram :: [Ast.Function Range] -> String
+goOverProgram :: [Ast.Function Range] -> String
+goOverProgram (a:_) = ""
 -- goOverProgram (a:_) = functions a
 
 -- functions :: Ast.Function Range -> String

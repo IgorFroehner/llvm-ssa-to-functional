@@ -4,8 +4,6 @@ module Ast where
 
 import Data.ByteString.Lazy.Char8 (ByteString)
 
--- * AST
-
 data Name a
   = LName a ByteString
   | GName a ByteString
@@ -37,7 +35,7 @@ data Return a
   deriving (Foldable, Show)
 
 data ArgumentDef a
-  = ArgumentDef a (Type a) (Name a)
+  = ArgumentDef a (Type a) (Maybe (Name a))
   deriving (Foldable, Show)
 
 data Dec a
@@ -69,7 +67,7 @@ data Cmp a
   deriving (Foldable, Show)
 
 data Br a
-  = Br a (Value a) (Type a) (Name a) (Type a) (Name a)
+  = Br a [(Type a, Value a)]
   deriving (Foldable, Show)
 
 data Add a

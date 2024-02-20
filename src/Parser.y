@@ -77,7 +77,8 @@ arguments :: { [ArgumentDef L.Range] }
   |                                  { [] }
 
 argument :: { ArgumentDef L.Range }
-  : typeAnotation lname              { ArgumentDef (info $1 <-> info $2) $1 $2 }
+  : typeAnotation lname              { ArgumentDef (info $1 <-> info $2) $1 (Just $2) }
+  | typeAnotation                    { ArgumentDef (info $1) $1 Nothing }
 
 functionStatementBlocks :: { [BasicBlock L.Range] }
   : initialStatementsBlock blocks    { $1 : $2 }
@@ -165,7 +166,11 @@ cmpDef :: { Cmp L.Range }
   : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range cmp) }
 
 brCall :: { Br L.Range }
-  : br typeAnotation value ',' typeAnotation lname ',' typeAnotation lname { Br (L.rtRange $1 <-> info $9) $3 $5 $6 $8 $9 }
+  : br brArguments { Br (L.rtRange $1) $2 }
+
+brArguments :: { [(Type L.Range, Value L.Range)] }
+  : typeAnotation value ',' brArguments                                 { [($1, $2)] ++ $4 }
+  | typeAnotation value                                                 { [($1, $2)] }
 
 addCall :: { Add L.Range }
   : add typeAnotation value ',' value { Add (L.rtRange $1 <-> info $5) $2 $3 $5 }
