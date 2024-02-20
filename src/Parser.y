@@ -66,8 +66,7 @@ program :: { [Function L.Range] }
 
 -- Funciton Definitions
 funcDef :: { Function L.Range }
-  : define typeAnotation gname '(' arguments ')' '{' stmts '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) $2 $3 $5 $8 }
-  | define typeAnotation gname '(' arguments ')' '{' '}'       { FunctionDef (L.rtRange $1 <-> L.rtRange $8) $2 $3 $5 [] }
+  : define typeAnotation gname '(' arguments ')' '{' functionStatementBlocks '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) $2 $3 $5 $8 }
 
 funcDec :: { Function L.Range }
   : declare typeAnotation gname '(' arguments ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $6) $2 $3 $5 }
@@ -80,7 +79,25 @@ arguments :: { [ArgumentDef L.Range] }
 argument :: { ArgumentDef L.Range }
   : typeAnotation lname              { ArgumentDef (info $1 <-> info $2) $1 $2 }
 
+functionStatementBlocks :: { [BasicBlock L.Range] }
+  : initialStatementsBlock blocks    { $1 : $2 }
+
+blocks :: { [BasicBlock L.Range] }
+  : block blocks                     { $1 : $2 }
+  | block                            { [$1] }
+  |                                  { [] }
+
+block :: { BasicBlock L.Range }
+  : blockLabel stmts       { BasicBlock (info $1 <-> info (head $2)) (Just $1) $2 }
+
+blockLabel :: { Name L.Range }
+  : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range label) }
+
 -- Statements
+
+initialStatementsBlock :: { BasicBlock L.Range }
+  : stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing $1}
+
 stmts :: { [Stmt L.Range] }
   : stmts stmt                       { $1 ++ [$2] }
   | stmt                             { [$1] }

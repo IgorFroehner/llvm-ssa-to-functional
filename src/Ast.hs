@@ -48,8 +48,12 @@ data Dec a
   deriving (Foldable, Show)
 
 data Function a
-  = FunctionDef a (Type a) (Name a) [(ArgumentDef a)] [Stmt a]
-  | FunctionDec a (Type a) (Name a) [(ArgumentDef a)]
+  = FunctionDef a (Type a) (Name a) [ArgumentDef a] [BasicBlock a]
+  | FunctionDec a (Type a) (Name a) [ArgumentDef a]
+  deriving (Foldable, Show)
+
+data BasicBlock a
+  = BasicBlock a (Maybe (Name a)) [Stmt a]
   deriving (Foldable, Show)
 
 data Phi a
