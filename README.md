@@ -1,12 +1,26 @@
 # llvm-ir-to-functional
 
-#### Build
+### Build
 
 ```
 stack build
 ```
 
-#### Try in GHCi
+### Use the executable
+
+#### Generate the AST and print it
+
+```
+stack run -- <file_path.ll>
+```
+
+#### Generate a graphviz file to generate a graphical version of the AST
+
+```
+stack run -- --ast <file_path.ll>
+```
+
+### Try in GHCi
 
 ```
 stack ghci

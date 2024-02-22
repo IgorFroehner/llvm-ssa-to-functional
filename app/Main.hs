@@ -13,11 +13,10 @@ main = do
     args <- getArgs
     case args of
         ("--ast":file:_) -> do
-            -- Handle the case when '--ast' option is provided
             s <- BL.readFile file
             case runAlex s parseLLVMIR of
                 Left err -> putStrLn err
-                Right ast -> print (goOverProgram ast)
+                Right ast -> writeFile "output.dot" (goOverProgram ast)
         (file:_) -> do
             s <- BL.readFile file
             print $ runAlex s parseLLVMIR
@@ -27,51 +26,58 @@ main = do
         [] -> putStrLn "Usage: stack run -- <file>"
 
 goOverProgram :: [Ast.Function Range] -> String
-goOverProgram (a:_) = ""
--- goOverProgram (a:_) = functions a
+goOverProgram (a:_) = functions a
+goOverProgram [] = ""
 
--- functions :: Ast.Function Range -> String
--- functions (Ast.FunctionDef _ _ (Ast.GName _ name) _ blocks) = "digraph {\n" ++ pointFunction ("FuncDef " ++ LBS.unpack name) blocks ++ "}\n"
--- functions (Ast.FunctionDec _ _ (Ast.GName _ name) _) = show name
--- functions _ = "Unknown"
+functions :: Ast.Function Range -> String
+functions (Ast.FunctionDef _ _ (Ast.GName _ name) _ blocks) = digraph (function (LBS.unpack name) blocks)
+functions (Ast.FunctionDec _ _ (Ast.GName _ name) _) = show name
+functions _ = "Unknown"
 
--- pointFunction :: String -> [Ast.BasicBlock Range] -> String
--- pointFunction name (Ast.BasicBlock _ _ stmts) = parentNode name ++ concatMap unbuildBlock stmts
--- pointFunction _ a = ""
+function :: String -> [Ast.BasicBlock Range] -> String
+function name blocks = pointFunction ("FuncDef " ++ name) blocks
 
--- unbuildBlock :: [Ast.Stmt Range] -> String
--- unbuildBlock (a:x) = statements a ++ unbuildBlock x
--- unbuildBlock [] = ""
+digraph :: String -> String
+digraph content = "digraph {\n" ++ content ++ "}\n"
 
--- parentNode :: String -> String
--- parentNode name = " \"" ++ name ++ "\" -> "
+pointFunction :: String -> [Ast.BasicBlock Range] -> String
+pointFunction name blocks = concatMap (\stmt -> parentNode name ++ stmt) (map statements (concatMap extractStatements blocks))
 
--- statements :: Ast.Stmt Range -> String
--- statements (Ast.SDec stmt) = parentNode "SDec" ++ decs stmt ++ "\n"
--- statements (Ast.SCall stmt) = parentNode "SCall" ++ calls stmt ++ "\n"
--- statements (Ast.SReturn stmt) = parentNode "SReturn" ++ returns stmt ++ "\n"
--- statements (Ast.SBr stmt) = brs stmt ++ "\n"
+extractStatements :: Ast.BasicBlock a -> [Ast.Stmt a]
+extractStatements (Ast.BasicBlock _ _ stmts) = stmts
 
--- decs :: Ast.Dec Range -> String
--- decs (Ast.DecCall _ (Ast.LName _ name) call) = receiveBlock [show ("LName " ++ show name), calls call]
--- decs _ = "Unknown"
+parentNode :: String -> String
+parentNode name = " \"" ++ name ++ "\" -> "
 
--- receiveBlock :: [String] -> String
--- receiveBlock x = "{" ++ receiveList x ++ "}"
+statements :: Ast.Stmt Range -> String
+statements (Ast.SDec stmt) = parentNode "SDec" ++ decs stmt ++ "\n"
+statements (Ast.SCall stmt) = parentNode "SCall" ++ calls stmt ++ "\n"
+statements (Ast.SReturn stmt) = parentNode "SReturn" ++ returns stmt ++ "\n"
+statements (Ast.SBr stmt) = brs stmt ++ "\n"
 
--- receiveList :: [String] -> String
--- receiveList (a:x) = a ++ " " ++ receiveList x
--- receiveList [] = ""
+decs :: Ast.Dec Range -> String
+decs (Ast.DecCall _ (Ast.LName _ name) call) = receiveBlock [show ("LName " ++ show name), calls call]
+decs _ = "Unknown"
 
--- calls :: Ast.Call Range -> String
--- calls (Ast.Call _ _ (Ast.GName _ name) _) = "\"call " ++ LBS.unpack name ++ "\""
+receiveBlock :: [String] -> String
+receiveBlock x = "{" ++ receiveList x ++ "}"
 
--- returns :: Ast.Return Range -> String
--- returns (Ast.Return _ _ (Just valueReturned)) = show (value valueReturned)
+receiveList :: [String] -> String
+receiveList (a:x) = a ++ " " ++ receiveList x
+receiveList [] = ""
 
--- brs :: Ast.Br Range -> String
--- brs (Ast.Br _ cmpValue _ _ _ _) = "br " ++ value cmpValue
+calls :: Ast.Call Range -> String
+calls (Ast.Call _ _ (Ast.GName _ name) _) = "\"call " ++ LBS.unpack name ++ "\""
+calls _ = "Unknown"
 
--- value :: Ast.Value Range -> String
--- value (Ast.ValueInt (Ast.IntegerValue _ int)) = "ValueInt" ++ show int
--- value (Ast.ValueName (Ast.LName _ name)) = "ValueName " ++ show name
+returns :: Ast.Return Range -> String
+returns (Ast.Return _ _ (Just valueReturned)) = show (value valueReturned)
+returns (Ast.Return _ _ Nothing) = "void"
+
+brs :: Ast.Br Range -> String
+brs (Ast.Br _ _) = "br"
+
+value :: Ast.Value Range -> String
+value (Ast.ValueInt (Ast.IntegerValue _ int)) = "ValueInt" ++ show int
+value (Ast.ValueName (Ast.LName _ name)) = "ValueName " ++ show name
+value (Ast.ValueName (Ast.GName _ name)) = "Unknown"
