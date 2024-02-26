@@ -43,6 +43,7 @@ data Dec a
   | DecIcmp a (Name a) (Icmp a)
   | DecPhi a (Name a) (Phi a)
   | DecAdd a (Name a) (Add a)
+  | DecMul a (Name a) (Mul a)
   deriving (Foldable, Show)
 
 data Function a
@@ -72,6 +73,10 @@ data Br a
 
 data Add a
   = Add a (Type a) (Value a) (Value a)
+  deriving (Foldable, Show)
+
+data Mul a
+  = Mul a (Type a) (Value a) (Value a)
   deriving (Foldable, Show)
 
 data Stmt a

@@ -26,7 +26,6 @@ import Ast
   integer    { L.RangedToken (L.Integer _) _ }
 -- Type
   type       { L.RangedToken (L.Type _) _ }
-  void       { L.RangedToken (L.Type _) _ }
   i1         { L.RangedToken (L.Type _) _ }
 -- Keywords
   define     { L.RangedToken L.Define _ }
@@ -41,6 +40,7 @@ import Ast
   store      { L.RangedToken L.Store _ }
   load       { L.RangedToken L.Load _ }
   getelementptr { L.RangedToken L.GetElementPtr _ }
+  mul       { L.RangedToken L.Mul _ }
 -- Basic block
   basicblock { L.RangedToken (L.BasicBlock _) _ }
   -- Markers
@@ -82,6 +82,7 @@ argument :: { ArgumentDef L.Range }
 
 functionStatementBlocks :: { [BasicBlock L.Range] }
   : initialStatementsBlock blocks    { $1 : $2 }
+  |                                  { [] }
 
 blocks :: { [BasicBlock L.Range] }
   : block blocks                     { $1 : $2 }
@@ -136,6 +137,7 @@ dec :: { Dec L.Range }
   | lname '=' icmpCall               { DecIcmp (info $1 <-> info $3) $1 $3 }
   | lname '=' phiCall                { DecPhi (info $1 <-> info $3) $1 $3 }
   | lname '=' addCall                { DecAdd (info $1 <-> info $3) $1 $3 }
+  | lname '=' mulCall                { DecMul (info $1 <-> info $3) $1 $3 }
 
 funcCall :: { Call L.Range }
   : call typeAnotation gname '(' funcCallArguments ')' { unTok $1 (\range _ -> Call range $2 $3 $5) }
@@ -157,7 +159,7 @@ phiArguments :: { [(Value L.Range, Name L.Range)] }
 
 ret :: { Return L.Range }
   : return typeAnotation value       { Return (L.rtRange $1 <-> info $3) $2 (Just $3) }
-  | return void                      { Return (L.rtRange $1 <-> L.rtRange $2) (Type (L.rtRange $2) "void") Nothing }
+  | return typeAnotation             { Return (L.rtRange $1 <-> info $2) $2 Nothing }
 
 icmpCall :: { Icmp L.Range }
   : icmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
@@ -174,6 +176,9 @@ brArguments :: { [(Type L.Range, Value L.Range)] }
 
 addCall :: { Add L.Range }
   : add typeAnotation value ',' value { Add (L.rtRange $1 <-> info $5) $2 $3 $5 }
+
+mulCall :: { Mul L.Range }
+  : mul typeAnotation value ',' value { Mul (L.rtRange $1 <-> info $5) $2 $3 $5 }
 
 {
 parseError :: L.RangedToken -> L.Alex a

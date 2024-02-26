@@ -80,4 +80,4 @@ brs (Ast.Br _ _) = "br"
 value :: Ast.Value Range -> String
 value (Ast.ValueInt (Ast.IntegerValue _ int)) = "ValueInt" ++ show int
 value (Ast.ValueName (Ast.LName _ name)) = "ValueName " ++ show name
-value (Ast.ValueName (Ast.GName _ name)) = "Unknown"
+value (Ast.ValueName (Ast.GName _ _)) = "Unknown"

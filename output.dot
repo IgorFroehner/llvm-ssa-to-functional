@@ -1,0 +1,4 @@
+digraph {
+ "FuncDef @main" ->  "SDec" -> {"LName \"%1\"" "call @foo" }
+ "FuncDef @main" ->  "SReturn" -> "ValueName \"%1\""
+}

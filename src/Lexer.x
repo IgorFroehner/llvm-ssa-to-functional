@@ -46,6 +46,7 @@ tokens :-
 <0> store         { tok Store }
 <0> load          { tok Load }
 <0> getelementptr { tok GetElementPtr }
+<0> mul           { tok Mul }
 
 -- Markers / Operators
 <0> "="         { tok Assign }
@@ -135,6 +136,7 @@ data Token
   | Store
   | Load
   | GetElementPtr
+  | Mul
   -- Basic block
   | BasicBlock ByteString
   -- Markers
