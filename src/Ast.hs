@@ -42,8 +42,9 @@ data Dec a
   = DecCall a (Name a) (Call a)
   | DecIcmp a (Name a) (Icmp a)
   | DecPhi a (Name a) (Phi a)
-  | DecAdd a (Name a) (Add a)
-  | DecMul a (Name a) (Mul a)
+  | DecBinOp a (Name a) (BinOpCall a)
+  | DecConvOp a (Name a) (ConvOpCall a)
+  | DecSelect a (Name a) (Select a)
   deriving (Foldable, Show)
 
 data Function a
@@ -71,12 +72,24 @@ data Br a
   = Br a [(Type a, Value a)]
   deriving (Foldable, Show)
 
-data Add a
-  = Add a (Type a) (Value a) (Value a)
+data BinOp a
+  = BinOp a ByteString
   deriving (Foldable, Show)
 
-data Mul a
-  = Mul a (Type a) (Value a) (Value a)
+data BinOpCall a
+  = BinOpCall a (BinOp a) (Type a) (Value a) (Value a)
+  deriving (Foldable, Show)
+
+data ConvOp a
+  = ConvOp a ByteString
+  deriving (Foldable, Show)
+
+data ConvOpCall a
+  = ConvOpCall a (ConvOp a) (Type a) (Value a) (Type a)
+  deriving (Foldable, Show)
+
+data Select a
+  = Select a (Type a) (Value a) (Value a) (Value a)
   deriving (Foldable, Show)
 
 data Stmt a

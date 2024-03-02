@@ -36,17 +36,31 @@ tokens :-
 -- Keywords
 <0> define        { tok Define }
 <0> declare       { tok Declare }
-<0> ret           { tok Return }
-<0> type          { tok Typedef }
-<0> phi           { tok Phi }
-<0> call          { tok Call }
-<0> br            { tok Br }
-<0> add           { tok Add }
 <0> icmp          { tok Icmp }
+<0> ret           { tok Return }
+<0> br            { tok Br }
+<0> phi           { tok Phi }
+<0> select        { tok Select }
+<0> type          { tok Typedef }
+<0> call          { tok Call }
 <0> store         { tok Store }
 <0> load          { tok Load }
 <0> getelementptr { tok GetElementPtr }
-<0> mul           { tok Mul }
+
+-- Operations
+
+<0> add           { tokBinOp }
+<0> sub           { tokBinOp }
+<0> mul           { tokBinOp }
+<0> udiv          { tokBinOp }
+<0> sdiv          { tokBinOp }
+<0> urem          { tokBinOp }
+<0> srem          { tokBinOp }
+
+-- Conversion operations
+<0> trunc         { tokConvOp }
+<0> zext          { tokConvOp }
+<0> sext          { tokConvOp }
 
 -- Markers / Operators
 <0> "="         { tok Assign }
@@ -57,9 +71,10 @@ tokens :-
 <0> "["         { tok LBrack }
 <0> "]"         { tok RBrack }
 <0> ","         { tok Comma }
+<0> to          { tok To }
 
 -- Beginning of a block
-<0> ($alpha | $digit )+ ":" { tokBasicBlock }
+<0> ([a-zA-Z_0-9])+ ":" { tokBasicBlock }
 
 -- Identifiers
 <0> @global_id     { tokGlobalId }
@@ -131,12 +146,15 @@ data Token
   | Phi
   | Call
   | Br
-  | Add
   | Icmp
   | Store
   | Load
   | GetElementPtr
-  | Mul
+  | Select
+  -- Binary operators
+  | BinOp ByteString
+  -- Conversion operators
+  | ConvOp ByteString
   -- Basic block
   | BasicBlock ByteString
   -- Markers
@@ -148,6 +166,7 @@ data Token
   | LBrack
   | RBrack
   | Comma
+  | To
   -- Comparison kinds
   | Cmp ByteString
   -- EOF
@@ -213,6 +232,20 @@ tokCmp :: AlexAction RangedToken
 tokCmp inp@(_, _, str, _) len =
   pure RangedToken
     { rtToken = Cmp $ BS.take len str
+    , rtRange = mkRange inp len
+    }
+
+tokBinOp :: AlexAction RangedToken
+tokBinOp inp@(_, _, str, _) len =
+  pure RangedToken
+    { rtToken = BinOp $ BS.take len str
+    , rtRange = mkRange inp len
+    }
+
+tokConvOp :: AlexAction RangedToken
+tokConvOp inp@(_, _, str, _) len =
+  pure RangedToken
+    { rtToken = ConvOp $ BS.take len str
     , rtRange = mkRange inp len
     }
 

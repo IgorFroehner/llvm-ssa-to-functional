@@ -35,12 +35,15 @@ import Ast
   phi        { L.RangedToken L.Phi _ }
   call       { L.RangedToken L.Call _ }
   br         { L.RangedToken L.Br _ }
-  add        { L.RangedToken L.Add _ }
   icmp       { L.RangedToken L.Icmp _ }
   store      { L.RangedToken L.Store _ }
   load       { L.RangedToken L.Load _ }
   getelementptr { L.RangedToken L.GetElementPtr _ }
-  mul       { L.RangedToken L.Mul _ }
+  select     { L.RangedToken L.Select _ }
+  -- Binary operations
+  binOp      { L.RangedToken (L.BinOp _) _ }
+  -- Conversion operations
+  convOp     { L.RangedToken (L.ConvOp _) _ }
 -- Basic block
   basicblock { L.RangedToken (L.BasicBlock _) _ }
   -- Markers
@@ -52,6 +55,7 @@ import Ast
   '['       { L.RangedToken L.LBrack _ }
   ']'       { L.RangedToken L.RBrack _ }
   ','       { L.RangedToken L.Comma _ }
+  to        { L.RangedToken L.To _ }
   -- Comparison kinds
   cmp       { L.RangedToken (L.Cmp _) _ }
 
@@ -82,6 +86,7 @@ argument :: { ArgumentDef L.Range }
 
 functionStatementBlocks :: { [BasicBlock L.Range] }
   : initialStatementsBlock blocks    { $1 : $2 }
+  | blocks                           { $1 }
   |                                  { [] }
 
 blocks :: { [BasicBlock L.Range] }
@@ -95,10 +100,10 @@ block :: { BasicBlock L.Range }
 blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range label) }
 
--- Statements
-
 initialStatementsBlock :: { BasicBlock L.Range }
   : stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing $1}
+
+-- Statements
 
 stmts :: { [Stmt L.Range] }
   : stmts stmt                       { $1 ++ [$2] }
@@ -136,8 +141,9 @@ dec :: { Dec L.Range }
   : lname '=' funcCall               { DecCall (info $1 <-> info $3) $1 $3 }
   | lname '=' icmpCall               { DecIcmp (info $1 <-> info $3) $1 $3 }
   | lname '=' phiCall                { DecPhi (info $1 <-> info $3) $1 $3 }
-  | lname '=' addCall                { DecAdd (info $1 <-> info $3) $1 $3 }
-  | lname '=' mulCall                { DecMul (info $1 <-> info $3) $1 $3 }
+  | lname '=' binOpCall              { DecBinOp (info $1 <-> info $3) $1 $3 }
+  | lname '=' convOpCall             { DecConvOp (info $1 <-> info $3) $1 $3 }
+  | lname '=' selectCall             { DecSelect (info $1 <-> info $3) $1 $3 }
 
 funcCall :: { Call L.Range }
   : call typeAnotation gname '(' funcCallArguments ')' { unTok $1 (\range _ -> Call range $2 $3 $5) }
@@ -174,11 +180,20 @@ brArguments :: { [(Type L.Range, Value L.Range)] }
   : typeAnotation value ',' brArguments                                 { [($1, $2)] ++ $4 }
   | typeAnotation value                                                 { [($1, $2)] }
 
-addCall :: { Add L.Range }
-  : add typeAnotation value ',' value { Add (L.rtRange $1 <-> info $5) $2 $3 $5 }
+binOpCall :: { BinOpCall L.Range }
+  : binOperation typeAnotation value ',' value { BinOpCall (info $1 <-> info $5) $1 $2 $3 $5 }
 
-mulCall :: { Mul L.Range }
-  : mul typeAnotation value ',' value { Mul (L.rtRange $1 <-> info $5) $2 $3 $5 }
+binOperation :: { BinOp L.Range }
+  : binOp { unTok $1 (\range (L.BinOp op) -> BinOp range op) }
+
+convOpCall :: { ConvOpCall L.Range }
+  : convOperation typeAnotation value to typeAnotation { ConvOpCall (info $1 <-> info $5) $1 $2 $3 $5 }
+
+convOperation :: { ConvOp L.Range }
+  : convOp { unTok $1 (\range (L.ConvOp op) -> ConvOp range op) }
+
+selectCall :: { Select L.Range }
+  : select typeAnotation value ',' typeAnotation value ',' typeAnotation value { Select (L.rtRange $1 <-> info $6) $2 $3 $6 $9 }
 
 {
 parseError :: L.RangedToken -> L.Alex a
