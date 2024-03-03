@@ -67,4 +67,7 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - hspec
+    - QuickCheck
+    - directory
     - llvm-ir-to-functional
