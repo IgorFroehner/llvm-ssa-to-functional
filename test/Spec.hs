@@ -1,16 +1,24 @@
 import Test.Hspec
 import Test.QuickCheck
+import Data.Either (isRight, isLeft)
 import Control.Exception (evaluate)
 import System.Directory
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.Lazy as BL
+
+import Lexer
+import Parser
 
 main :: IO ()
 main = hspec $ do
-  describe "Prelude.head" $ do
-    it "returns the first element of a list" $ do
-      head [23 ..] `shouldBe` (23 :: Int)
+  describe "Lexer.scanMany" $ do
+    it "returns Right for valid tokens" $ do
+      scanMany "loop_start: %1 define" `shouldSatisfy` isRight
 
-    it "returns the first element of an *arbitrary* list" $
-      property $ \x xs -> head (x:xs) == (x :: Int)
+    it "returns Left for invalid tokens" $ do
+      scanMany "asdf" `shouldSatisfy` isLeft
 
-    it "throws an exception if used with an empty list" $ do
-      evaluate (head []) `shouldThrow` anyException
+  describe "Parser.parseLLVMIR" $ do
+    it "parses a valid LLVM IR" $ do
+      s <- BL.readFile "examples/pow_loops.ll"
+      runAlex s parseLLVMIR `shouldSatisfy` isRight

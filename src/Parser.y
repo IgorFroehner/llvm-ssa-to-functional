@@ -87,11 +87,9 @@ argument :: { ArgumentDef L.Range }
 functionStatementBlocks :: { [BasicBlock L.Range] }
   : initialStatementsBlock blocks    { $1 : $2 }
   | blocks                           { $1 }
-  |                                  { [] }
 
 blocks :: { [BasicBlock L.Range] }
   : block blocks                     { $1 : $2 }
-  | block                            { [$1] }
   |                                  { [] }
 
 block :: { BasicBlock L.Range }
