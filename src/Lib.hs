@@ -1,15 +1,13 @@
-module Lib where
+module Lib (genAst) where
 
 import Lexer
 
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import System.Environment (getArgs)
 import qualified Ast
 
-goOverProgram :: [Ast.Function Range] -> String
-goOverProgram (a:_) = functions a
-goOverProgram [] = ""
+genAst :: [Ast.Function Range] -> String
+genAst (a:_) = functions a
+genAst [] = ""
 
 functions :: Ast.Function Range -> String
 functions (Ast.FunctionDef _ _ (Ast.GName _ name) _ blocks) = digraph (function (LBS.unpack name) blocks)
@@ -17,13 +15,13 @@ functions (Ast.FunctionDec _ _ (Ast.GName _ name) _) = show name
 functions _ = "Unknown"
 
 function :: String -> [Ast.BasicBlock Range] -> String
-function name blocks = pointFunction ("FuncDef " ++ name) blocks
+function name = pointFunction ("FuncDef " ++ name)
 
 digraph :: String -> String
 digraph content = "digraph {\n" ++ content ++ "}\n"
 
 pointFunction :: String -> [Ast.BasicBlock Range] -> String
-pointFunction name blocks = concatMap (\stmt -> parentNode name ++ stmt) (map statements (concatMap extractStatements blocks))
+pointFunction name blocks = concatMap ((\stmt -> parentNode name ++ stmt) . statements) (concatMap extractStatements blocks)
 
 extractStatements :: Ast.BasicBlock a -> [Ast.Stmt a]
 extractStatements (Ast.BasicBlock _ _ stmts) = stmts

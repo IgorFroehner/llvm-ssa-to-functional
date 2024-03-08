@@ -1,9 +1,5 @@
 import Test.Hspec
-import Test.QuickCheck
 import Data.Either (isRight, isLeft)
-import Control.Exception (evaluate)
-import System.Directory
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Lazy as BL
 
 import Lexer

@@ -1,4 +1,11 @@
 digraph {
- "FuncDef @main" ->  "SDec" -> {"LName \"%1\"" "call @foo" }
- "FuncDef @main" ->  "SReturn" -> "ValueName \"%1\""
+ "FuncDef @pow" -> br
+ "FuncDef @pow" ->  "SDec" -> Unknown
+ "FuncDef @pow" ->  "SDec" -> Unknown
+ "FuncDef @pow" ->  "SDec" -> Unknown
+ "FuncDef @pow" -> br
+ "FuncDef @pow" ->  "SDec" -> Unknown
+ "FuncDef @pow" ->  "SDec" -> Unknown
+ "FuncDef @pow" -> br
+ "FuncDef @pow" ->  "SReturn" -> "ValueName \"%r.0\""
 }

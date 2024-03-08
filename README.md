@@ -36,7 +36,8 @@ runAlex "%1 = call @asdf()" parseLLVMIR
 runAlex "call @asdf()" parseLLVMIR
 ```
 
-# TODO:
+#### Run Tests
 
-- [ ] accept float constants as hex
-- [ ] fix the strings constants
+```haskell
+stack test
+```

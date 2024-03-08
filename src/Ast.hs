@@ -1,6 +1,28 @@
-{-# LANGUAGE DeriveFoldable, NoStrictData #-}
+{-# LANGUAGE DeriveFoldable #-}
 
-module Ast where
+module Ast (
+  Name(..),
+  IntegerValue(..),
+  Value(..),
+  Type(..),
+  Call(..),
+  CallArgument(..),
+  Return(..),
+  ArgumentDef(..),
+  Dec(..),
+  Function(..),
+  BasicBlock(..),
+  Phi(..),
+  Icmp(..),
+  Cmp(..),
+  Br(..),
+  BinOp(..),
+  BinOpCall(..),
+  ConvOp(..),
+  ConvOpCall(..),
+  Select(..),
+  Stmt(..)
+) where
 
 import Data.ByteString.Lazy.Char8 (ByteString)
 
