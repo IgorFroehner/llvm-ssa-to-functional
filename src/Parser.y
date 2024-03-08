@@ -93,13 +93,14 @@ blocks :: { [BasicBlock L.Range] }
   |                                  { [] }
 
 block :: { BasicBlock L.Range }
-  : blockLabel stmts       { BasicBlock (info $1 <-> info (head $2)) (Just $1) $2 }
+  : blockLabel phiDecs stmts       { BasicBlock (info $1 <-> info (head $3)) (Just $1) $2 $3 }
+  | blockLabel stmts       { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $2 }
 
 blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range label) }
 
 initialStatementsBlock :: { BasicBlock L.Range }
-  : stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing $1}
+  : stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1}
 
 -- Statements
 
@@ -112,6 +113,10 @@ stmt :: { Stmt L.Range }
   | dec                              { SDec $1 }
   | ret                              { SReturn $1 }
   | brCall                           { SBr $1 }
+
+phiDecs :: { [PhiDec L.Range] }
+  : phiDecs phiDec                   { $1 ++ [$2] }
+  | phiDec                           { [$1] }
 
 -- Variables and Values
 
@@ -138,10 +143,12 @@ typeAnotation :: { Type L.Range }
 dec :: { Dec L.Range }
   : lname '=' funcCall               { DecCall (info $1 <-> info $3) $1 $3 }
   | lname '=' icmpCall               { DecIcmp (info $1 <-> info $3) $1 $3 }
-  | lname '=' phiCall                { DecPhi (info $1 <-> info $3) $1 $3 }
   | lname '=' binOpCall              { DecBinOp (info $1 <-> info $3) $1 $3 }
   | lname '=' convOpCall             { DecConvOp (info $1 <-> info $3) $1 $3 }
   | lname '=' selectCall             { DecSelect (info $1 <-> info $3) $1 $3 }
+
+phiDec :: { PhiDec L.Range }
+  : lname '=' phiCall                { PhiDec (info $1 <-> info $3) $1 $3 }
 
 funcCall :: { Call L.Range }
   : call typeAnotation gname '(' funcCallArguments ')' { unTok $1 (\range _ -> Call range $2 $3 $5) }

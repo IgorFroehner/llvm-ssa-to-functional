@@ -21,7 +21,8 @@ module Ast (
   ConvOp(..),
   ConvOpCall(..),
   Select(..),
-  Stmt(..)
+  Stmt(..),
+  PhiDec(..)
 ) where
 
 import Data.ByteString.Lazy.Char8 (ByteString)
@@ -60,10 +61,13 @@ data ArgumentDef a
   = ArgumentDef a (Type a) (Maybe (Name a))
   deriving (Foldable, Show)
 
+data PhiDec a
+  = PhiDec a (Name a) (Phi a)
+  deriving (Foldable, Show)
+
 data Dec a
   = DecCall a (Name a) (Call a)
   | DecIcmp a (Name a) (Icmp a)
-  | DecPhi a (Name a) (Phi a)
   | DecBinOp a (Name a) (BinOpCall a)
   | DecConvOp a (Name a) (ConvOpCall a)
   | DecSelect a (Name a) (Select a)
@@ -75,7 +79,7 @@ data Function a
   deriving (Foldable, Show)
 
 data BasicBlock a
-  = BasicBlock a (Maybe (Name a)) [Stmt a]
+  = BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a]
   deriving (Foldable, Show)
 
 data Phi a

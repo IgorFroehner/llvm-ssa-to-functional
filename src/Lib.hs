@@ -24,7 +24,7 @@ pointFunction :: String -> [Ast.BasicBlock Range] -> String
 pointFunction name blocks = concatMap ((\stmt -> parentNode name ++ stmt) . statements) (concatMap extractStatements blocks)
 
 extractStatements :: Ast.BasicBlock a -> [Ast.Stmt a]
-extractStatements (Ast.BasicBlock _ _ stmts) = stmts
+extractStatements (Ast.BasicBlock _ _ _ stmts) = stmts
 
 parentNode :: String -> String
 parentNode name = " \"" ++ name ++ "\" -> "
