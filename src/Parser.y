@@ -93,14 +93,24 @@ blocks :: { [BasicBlock L.Range] }
   |                                  { [] }
 
 block :: { BasicBlock L.Range }
-  : blockLabel phiDecs stmts       { BasicBlock (info $1 <-> info (head $3)) (Just $1) $2 $3 }
-  | blockLabel stmts       { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $2 }
+  : blockLabel phiDecs stmts branch  { BasicBlock (info $1 <-> info (head $3)) (Just $1) $2 $3 (Just $4) }
+  | blockLabel phiDecs stmts         { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $3 Nothing }
+  | blockLabel phiDecs branch        { BasicBlock (info $1 <-> info (head $2)) (Just $1) $2 [] (Just $3) }
+  | blockLabel stmts branch          { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $2 (Just $3) }
+  | blockLabel phiDecs               { BasicBlock (info $1 <-> info (head $2)) (Just $1) $2 [] Nothing }
+  | blockLabel branch                { BasicBlock (info $1 <-> info $1) (Just $1) [] [] (Just $2) }
+  | blockLabel stmts                 { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $2 Nothing }
 
 blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range label) }
 
 initialStatementsBlock :: { BasicBlock L.Range }
-  : stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1}
+  : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1 (Just $2) }
+  | branch                           { BasicBlock (info $1) Nothing [] [] (Just $1) }
+  | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1 Nothing }
+
+branch :: { Branch L.Range }
+  : brCall                           { Branch $1 }
 
 -- Statements
 
@@ -112,7 +122,6 @@ stmt :: { Stmt L.Range }
   : funcCall                         { SCall $1 }
   | dec                              { SDec $1 }
   | ret                              { SReturn $1 }
-  | brCall                           { SBr $1 }
 
 phiDecs :: { [PhiDec L.Range] }
   : phiDecs phiDec                   { $1 ++ [$2] }

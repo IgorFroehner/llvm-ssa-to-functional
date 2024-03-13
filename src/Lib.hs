@@ -24,7 +24,7 @@ pointFunction :: String -> [Ast.BasicBlock Range] -> String
 pointFunction name blocks = concatMap ((\stmt -> parentNode name ++ stmt) . statements) (concatMap extractStatements blocks)
 
 extractStatements :: Ast.BasicBlock a -> [Ast.Stmt a]
-extractStatements (Ast.BasicBlock _ _ _ stmts) = stmts
+extractStatements (Ast.BasicBlock _ _ _ stmts _) = stmts
 
 parentNode :: String -> String
 parentNode name = " \"" ++ name ++ "\" -> "
@@ -33,7 +33,6 @@ statements :: Ast.Stmt Range -> String
 statements (Ast.SDec stmt) = parentNode "SDec" ++ decs stmt ++ "\n"
 statements (Ast.SCall stmt) = parentNode "SCall" ++ calls stmt ++ "\n"
 statements (Ast.SReturn stmt) = parentNode "SReturn" ++ returns stmt ++ "\n"
-statements (Ast.SBr stmt) = brs stmt ++ "\n"
 
 decs :: Ast.Dec Range -> String
 decs (Ast.DecCall _ (Ast.LName _ name) call) = receiveBlock [show ("LName " ++ show name), calls call]
@@ -54,8 +53,8 @@ returns :: Ast.Return Range -> String
 returns (Ast.Return _ _ (Just valueReturned)) = show (value valueReturned)
 returns (Ast.Return _ _ Nothing) = "void"
 
-brs :: Ast.Br Range -> String
-brs (Ast.Br _ _) = "br"
+-- brs :: Ast.Br Range -> String
+-- brs (Ast.Br _ _) = "br"
 
 value :: Ast.Value Range -> String
 value (Ast.ValueInt (Ast.IntegerValue _ int)) = "ValueInt" ++ show int

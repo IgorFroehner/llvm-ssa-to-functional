@@ -70,5 +70,6 @@ tests:
     - hspec
     - QuickCheck
     - directory
+    - filepath
     - bytestring
     - llvm-ir-to-functional

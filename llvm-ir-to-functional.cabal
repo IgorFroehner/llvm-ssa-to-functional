@@ -81,6 +81,7 @@ test-suite llvm-ir-to-functional-test
     , base >=4.7 && <5
     , bytestring
     , directory
+    , filepath
     , hspec
     , llvm-ir-to-functional
   default-language: Haskell2010

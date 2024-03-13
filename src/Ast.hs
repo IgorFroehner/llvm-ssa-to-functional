@@ -22,7 +22,8 @@ module Ast (
   ConvOpCall(..),
   Select(..),
   Stmt(..),
-  PhiDec(..)
+  PhiDec(..),
+  Branch(..)
 ) where
 
 import Data.ByteString.Lazy.Char8 (ByteString)
@@ -79,7 +80,7 @@ data Function a
   deriving (Foldable, Show)
 
 data BasicBlock a
-  = BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a]
+  = BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a] (Maybe (Branch a))
   deriving (Foldable, Show)
 
 data Phi a
@@ -118,9 +119,12 @@ data Select a
   = Select a (Type a) (Value a) (Value a) (Value a)
   deriving (Foldable, Show)
 
+newtype Branch a
+  = Branch (Br a)
+  deriving (Foldable, Show)
+
 data Stmt a
   = SDec (Dec a)
   | SCall (Call a)
   | SReturn (Return a)
-  | SBr (Br a)
   deriving (Foldable, Show)

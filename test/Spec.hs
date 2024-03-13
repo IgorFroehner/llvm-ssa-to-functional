@@ -1,9 +1,23 @@
 import Test.Hspec
 import Data.Either (isRight, isLeft)
 import qualified Data.ByteString.Lazy as BL
+import System.Directory (listDirectory)
+import System.FilePath ((</>))
+import Control.Monad (forM_)
 
 import Lexer
 import Parser
+
+-- Helper function that tests all files in the given directory
+testAllFilesInDirectory :: FilePath -> IO ()
+testAllFilesInDirectory dir = do
+  files <- listDirectory dir
+  forM_ files $ \file -> do
+    let fullPath = dir </> file
+    s <- BL.readFile fullPath
+    case runAlex s parseLLVMIR of
+      Left _ -> error $ "Failed to parse file: " ++ fullPath
+      Right _ -> return ()
 
 main :: IO ()
 main = hspec $ do
@@ -15,6 +29,5 @@ main = hspec $ do
       scanMany "asdf" `shouldSatisfy` isLeft
 
   describe "Parser.parseLLVMIR" $ do
-    it "parses a valid LLVM IR" $ do
-      s <- BL.readFile "examples/pow_loops.ll"
-      runAlex s parseLLVMIR `shouldSatisfy` isRight
+    it "parses all examples as expected" $ do
+      testAllFilesInDirectory "examples"
