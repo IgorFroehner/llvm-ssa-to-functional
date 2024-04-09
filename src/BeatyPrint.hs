@@ -9,12 +9,11 @@ unpack :: LBS.ByteString -> String
 unpack = LBS.unpack
 
 beautyPrint :: [Ast.Function Range] -> String
-beautyPrint (a:_) = function a
-beautyPrint [] = ""
+beautyPrint = concatMap function
 
 function :: Ast.Function Range -> String
 function (Ast.FunctionDef _ _ (Ast.GName _ name) _ blocks) = "F Def " ++ unpack name ++ ":\n" ++ unblocks blocks
-function (Ast.FunctionDec _ _ (Ast.GName _ name) _) = "F Dec" ++ unpack name
+function (Ast.FunctionDec _ _ (Ast.GName _ name) _) = "F Dec" ++ unpack name ++ "\n"
 function _ = "Unknown\n"
 
 unblocks :: [Ast.BasicBlock Range] -> String
@@ -24,12 +23,9 @@ unblock :: Ast.BasicBlock Range -> String
 unblock (Ast.BasicBlock _ Nothing phis stmts flow) = unphis phis ++ unstmts stmts ++ unflow flow
 unblock (Ast.BasicBlock _ (Just name) phis stmts flow) = "Block " ++ uname name ++ "\n" ++ unphis phis ++ unstmts stmts ++ unflow flow
 
--- Branch (Br a)
---     Br a [(Type a, Value a)]
 unflow :: Maybe (Ast.Flow Range) -> String
 unflow (Just (Ast.FlowBranch (Ast.Br _ args))) = "  Br " ++ brargs args ++ "\n"
-unflow (Just (Ast.FlowReturn (Ast.Return _ _ (Just valueReturned)))) = "  Return " ++ unvalue valueReturned ++ "\n"
-unflow (Just (Ast.FlowReturn (Ast.Return _ _ Nothing))) = "  Return void\n"
+unflow (Just (Ast.FlowReturn ret)) = unreturn ret ++ "\n"
 unflow Nothing = ""
 
 brargs :: [(Ast.Type Range, Ast.Value Range)] -> String
@@ -53,8 +49,8 @@ unstmt (Ast.SCall stmt) = uncall stmt ++ "\n"
 -- unstmt (Ast.SReturn stmt) = "  Return " ++ unreturn stmt ++ "\n"
 
 unreturn :: Ast.Return Range -> String
-unreturn (Ast.Return _ _ (Just valueReturned)) = unvalue valueReturned
-unreturn (Ast.Return _ _ Nothing) = "void"
+unreturn (Ast.Return _ _ (Just valueReturned)) = "  Return " ++ unvalue valueReturned
+unreturn (Ast.Return _ _ Nothing) = "  Return void"
 
 undec :: Ast.Dec Range -> String
 undec (Ast.DecCall _ name call) = "  Dec " ++ uname name ++ " = " ++ uncall call ++ "\n"
@@ -64,7 +60,7 @@ undec (Ast.DecConvOp _ name convop) = "  Dec " ++ uname name ++ " = " ++ unconvo
 undec (Ast.DecSelect _ name select) = "  Dec " ++ uname name ++ " = " ++ unselect select ++ "\n"
 
 uncall :: Ast.Call Range -> String
-uncall (Ast.Call _ _ (Ast.GName _ name) _) = "call " ++ unpack name
+uncall (Ast.Call _ _ (Ast.GName _ name) _) = "  Call " ++ unpack name
 uncall _ = "Unknown"
 
 unicmp :: Ast.Icmp Range -> String
