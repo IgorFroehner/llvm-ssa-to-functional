@@ -26,6 +26,8 @@ source-repository head
 library
   exposed-modules:
       Ast
+      BeatyPrint
+      GraphViz
       Lexer
       Lib
       Parser

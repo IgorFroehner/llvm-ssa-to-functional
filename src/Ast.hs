@@ -23,7 +23,7 @@ module Ast (
   Select(..),
   Stmt(..),
   PhiDec(..),
-  Branch(..)
+  Flow(..)
 ) where
 
 import Data.ByteString.Lazy.Char8 (ByteString)
@@ -80,7 +80,7 @@ data Function a
   deriving (Foldable, Show)
 
 data BasicBlock a
-  = BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a] (Maybe (Branch a))
+  = BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a] (Maybe (Flow a))
   deriving (Foldable, Show)
 
 data Phi a
@@ -119,6 +119,11 @@ data Select a
   = Select a (Type a) (Value a) (Value a) (Value a)
   deriving (Foldable, Show)
 
+data Flow a
+  = FlowBranch (Br a)
+  | FlowReturn (Return a)
+  deriving (Foldable, Show)
+
 newtype Branch a
   = Branch (Br a)
   deriving (Foldable, Show)
@@ -126,5 +131,4 @@ newtype Branch a
 data Stmt a
   = SDec (Dec a)
   | SCall (Call a)
-  | SReturn (Return a)
   deriving (Foldable, Show)

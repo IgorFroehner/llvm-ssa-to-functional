@@ -109,8 +109,9 @@ initialStatementsBlock :: { BasicBlock L.Range }
   | branch                           { BasicBlock (info $1) Nothing [] [] (Just $1) }
   | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1 Nothing }
 
-branch :: { Branch L.Range }
-  : brCall                           { Branch $1 }
+branch :: { Flow L.Range }
+  : brCall                           { FlowBranch $1 }
+  | ret                              { FlowReturn $1 }
 
 -- Statements
 
@@ -121,7 +122,6 @@ stmts :: { [Stmt L.Range] }
 stmt :: { Stmt L.Range }
   : funcCall                         { SCall $1 }
   | dec                              { SDec $1 }
-  | ret                              { SReturn $1 }
 
 phiDecs :: { [PhiDec L.Range] }
   : phiDecs phiDec                   { $1 ++ [$2] }

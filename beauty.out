@@ -5,10 +5,10 @@ Block loop_start:
   Phi %r.0 = phi((%loop, %r.new)(%start, 1))
   Phi %i.0 = phi((%loop, %i.new)(%start, 0))
   Dec %done = icmp eq %i.0, %y
-  Br %done%exit%loop
+  Br %done, %exit, %loop
 Block loop:
   Dec %r.new = binop mul %r.0, %x
   Dec %i.new = binop add %i.0, 1
-  Br %done%exit%loop
+  Br %done, %exit, %loop
 Block exit:
   Return %r.0
