@@ -12,9 +12,18 @@ beautyPrint :: [Ast.Function Range] -> String
 beautyPrint = concatMap function
 
 function :: Ast.Function Range -> String
-function (Ast.FunctionDef _ _ (Ast.GName _ name) _ blocks) = "F Def " ++ unpack name ++ ":\n" ++ unblocks blocks
-function (Ast.FunctionDec _ _ (Ast.GName _ name) _) = "F Dec" ++ unpack name ++ "\n"
+function (Ast.FunctionDef _ _ (Ast.GName _ name) args blocks) = "F Def " ++ unpack name ++ "(" ++ unargs args ++ "):\n" ++ unblocks blocks
+function (Ast.FunctionDec _ _ (Ast.GName _ name) args) = "F Dec" ++ unpack name ++ "(" ++ unargs args ++ "):\n"
 function _ = "Unknown\n"
+
+unargs :: [Ast.ArgumentDef Range] -> String
+unargs = concatMap unarg
+
+-- ArgumentDef a (Type a) (Maybe (Name a))
+unarg :: Ast.ArgumentDef Range -> String
+unarg (Ast.ArgumentDef _ _ (Just (Ast.LName _ name))) = unpack name
+unarg (Ast.ArgumentDef _ _ (Just (Ast.GName _ name))) = unpack name
+unarg (Ast.ArgumentDef _ _ Nothing) = "a"
 
 unblocks :: [Ast.BasicBlock Range] -> String
 unblocks = concatMap unblock
@@ -59,9 +68,18 @@ undec (Ast.DecBinOp _ name binop) = "  Dec " ++ uname name ++ " = " ++ unbinop b
 undec (Ast.DecConvOp _ name convop) = "  Dec " ++ uname name ++ " = " ++ unconvop convop ++ "\n"
 undec (Ast.DecSelect _ name select) = "  Dec " ++ uname name ++ " = " ++ unselect select ++ "\n"
 
+-- Call a (Type a) (Name a) [CallArgument a]
 uncall :: Ast.Call Range -> String
-uncall (Ast.Call _ _ (Ast.GName _ name) _) = "  Call " ++ unpack name
+uncall (Ast.Call _ _ (Ast.GName _ name) args) = "  Call " ++ unpack name ++ "(" ++ callargs args ++ ")"
 uncall _ = "Unknown"
+
+callargs :: [Ast.CallArgument Range] -> String
+callargs (a:x) = callargs x ++ callarg a
+callargs [] = ""
+
+-- CallArgument a (Type a) (Value a)
+callarg :: Ast.CallArgument Range -> String
+callarg (Ast.CallArgument _ _ value) = unvalue value
 
 unicmp :: Ast.Icmp Range -> String
 unicmp (Ast.Icmp _ (Ast.Cmp _ cmp) _ value1 value2) = "icmp " ++ unpack cmp ++ " " ++ unvalue value1 ++ ", " ++ unvalue value2
@@ -89,4 +107,3 @@ unvalue (Ast.ValueName name) = uname name
 uname :: Ast.Name Range -> String
 uname (Ast.LName _ name) = unpack name
 uname (Ast.GName _ name) = unpack name
-
