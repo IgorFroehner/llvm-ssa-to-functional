@@ -5,13 +5,14 @@ import Lexer
 
 import qualified Ast
 import TranslateAux
+import NameNormalizer
 import Text.Printf
 
 translate :: [Ast.Function Range] -> String
 translate = concatMap translateFunction
 
 translateFunction :: Ast.Function Range -> String
-translateFunction (Ast.FunctionDef _ _ name args blocks) = functionString (uname name) (placeFunctionArgs args) (translateBlocks blocks)
+translateFunction (Ast.FunctionDef _ _ name args blocks) = functionString (normalizeName name) (placeFunctionArgs args) (translateBlocks blocks)
 translateFunction _ = ""
 
 placeFunctionArgs :: [Ast.ArgumentDef Range] -> String
@@ -19,7 +20,7 @@ placeFunctionArgs (a:x) = placeFunctionArg a ++ " " ++ placeFunctionArgs x
 placeFunctionArgs [] = ""
 
 placeFunctionArg :: Ast.ArgumentDef Range -> String
-placeFunctionArg (Ast.ArgumentDef _ _ (Just name)) = uname name
+placeFunctionArg (Ast.ArgumentDef _ _ (Just name)) = normalizeName name
 placeFunctionArg (Ast.ArgumentDef _ _ Nothing) = "-"
 
 translateBlocks :: [Ast.BasicBlock Range] -> String
@@ -47,27 +48,25 @@ translateStmt (Ast.SDec stmt) = translateDec stmt
 translateStmt (Ast.SCall stmt) = translateCall stmt
 
 translateDec :: Ast.Dec Range -> String
-translateDec (Ast.DecCall _ name call) = decString (uname name) (translateCallDec call)
-translateDec (Ast.DecIcmp _ name icmp) = decString (uname name) (translateICMP icmp)
-translateDec (Ast.DecBinOp _ name binop) = decString (uname name) (translateBinOp binop)
--- translateDec (Ast.DecConvOp _ name convop) = "  Dec " ++ uname name ++ " = " ++ unconvop convop ++ "\n"
--- translateDec (Ast.DecSelect _ name select) = "  Dec " ++ uname name ++ " = " ++ unselect select ++ "\n"
+translateDec (Ast.DecCall _ name call) = decString (normalizeName name) (translateCallDec call)
+translateDec (Ast.DecIcmp _ name icmp) = decString (normalizeName name) (translateICMP icmp)
+translateDec (Ast.DecBinOp _ name binop) = decString (normalizeName name) (translateBinOp binop)
+-- translateDec (Ast.DecConvOp _ name convop) = "  Dec " ++ normalizeName name ++ " = " ++ unconvop convop ++ "\n"
+translateDec (Ast.DecSelect _ name select) = decString (normalizeName name) (translateSelect select)
 translateDec _ = "Unknown"
 
 translateCallDec :: Ast.Call Range -> String
-translateCallDec (Ast.Call _ _ (Ast.GName _ name) args) = unpack name ++ " " ++ translateArgs args
-translateCallDec _ = "Unkonw"
+translateCallDec (Ast.Call _ _ name args) = normalizeName name ++ " " ++ translateArgs args
 
 translateCall :: Ast.Call Range -> String
-translateCall (Ast.Call _ _ (Ast.GName _ name) args) = "        " ++ unpack name ++ " " ++ translateArgs args ++ "\n"
-translateCall _ = "Unkonw"
+translateCall (Ast.Call _ _ name args) = "        " ++ normalizeName name ++ " " ++ translateArgs args ++ "\n"
 
 translateArgs :: [Ast.CallArgument Range] -> String
 translateArgs ((Ast.CallArgument _ _ value):x) = unvalue value ++ " " ++ translateArgs x
 translateArgs [] = ""
 
 translateFlow :: Ast.Flow Range -> String
-translateFlow (Ast.FlowBranch _) = "      calmo \n"
+translateFlow (Ast.FlowBranch _) = "       calmo \n"
 translateFlow (Ast.FlowReturn ret) = translateReturn ret
 
 translateReturn :: Ast.Return Range -> String
