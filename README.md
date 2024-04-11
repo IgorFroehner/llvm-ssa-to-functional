@@ -17,7 +17,7 @@ stack run -- <file_path.ll>
 #### Beauty Print the Parsed AST
 
 ```
-stack run -- --beauty
+stack run -- --beauty <file_path.ll>
 ```
 
 #### Generate a graphviz file to generate a graphical version of the AST

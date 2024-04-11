@@ -15,7 +15,6 @@ translateFunction (Ast.FunctionDef _ _ name args blocks) = functionString (uname
 translateFunction _ = ""
 
 placeFunctionArgs :: [Ast.ArgumentDef Range] -> String
-placeFunctionArgs [a] = placeFunctionArg a
 placeFunctionArgs (a:x) = placeFunctionArg a ++ " " ++ placeFunctionArgs x
 placeFunctionArgs [] = ""
 
@@ -34,7 +33,6 @@ translateBlock (Ast.BasicBlock _ Nothing phis stmts Nothing) = blockString "f" (
 translateBlock (Ast.BasicBlock _ (Just label) phis stmts Nothing) = blockString (uname label) (getArgsFromPhis phis) (translateStmts stmts) "" (uname label)
 
 getArgsFromPhis :: [Ast.PhiDec Range] -> String
-getArgsFromPhis [phi] = getArgFromPhi phi
 getArgsFromPhis (phi:x) = getArgFromPhi phi ++ " " ++ getArgsFromPhis x
 getArgsFromPhis [] = ""
 
@@ -49,9 +47,9 @@ translateStmt (Ast.SDec stmt) = translateDec stmt
 translateStmt (Ast.SCall stmt) = translateCall stmt
 
 translateDec :: Ast.Dec Range -> String
-translateDec (Ast.DecCall _ name call) = "        " ++ uname name ++ " = " ++ translateCallDec call ++ "\n"
-translateDec (Ast.DecIcmp _ name icmp) = "        " ++ uname name ++ " = " ++ translateICMP icmp ++ "\n"
-translateDec (Ast.DecBinOp _ name binop) = "        " ++ uname name ++ " = " ++ translateBinOp binop ++ "\n"
+translateDec (Ast.DecCall _ name call) = decString (uname name) (translateCallDec call)
+translateDec (Ast.DecIcmp _ name icmp) = decString (uname name) (translateICMP icmp)
+translateDec (Ast.DecBinOp _ name binop) = decString (uname name) (translateBinOp binop)
 -- translateDec (Ast.DecConvOp _ name convop) = "  Dec " ++ uname name ++ " = " ++ unconvop convop ++ "\n"
 -- translateDec (Ast.DecSelect _ name select) = "  Dec " ++ uname name ++ " = " ++ unselect select ++ "\n"
 translateDec _ = "Unknown"
@@ -73,11 +71,14 @@ translateFlow (Ast.FlowBranch _) = "      calmo \n"
 translateFlow (Ast.FlowReturn ret) = translateReturn ret
 
 translateReturn :: Ast.Return Range -> String
-translateReturn (Ast.Return _ _ (Just value)) = "      in " ++ unvalue value ++ "\n"
+translateReturn (Ast.Return _ _ (Just value)) = "     in " ++ unvalue value ++ "\n"
 translateReturn (Ast.Return _ _ Nothing) = ""
 
 functionString :: String -> String -> String -> String
-functionString = printf "%s %s = let in\n %s"
+functionString = printf "%s %s= let in\n%s"
 
 blockString :: String -> String -> String -> String -> String -> String
-blockString = printf "  let \n    %s %s =\n      let\n%s %s    in %s\n"
+blockString = printf "  let \n    %s %s=\n      let\n%s %s    in %s\n"
+
+decString :: String -> String -> String
+decString = printf "        %s = %s\n"
