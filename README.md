@@ -8,10 +8,16 @@ stack build
 
 ### Use the executable
 
-#### Generate the AST and print it
+#### Do the translation and print it
 
 ```
 stack run -- <file_path.ll>
+```
+
+#### Beauty Print the Parsed AST
+
+```
+stack run -- --beauty
 ```
 
 #### Generate a graphviz file to generate a graphical version of the AST

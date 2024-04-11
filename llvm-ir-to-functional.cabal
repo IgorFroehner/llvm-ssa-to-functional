@@ -30,7 +30,10 @@ library
       GraphViz
       Lexer
       Lib
+      NameGenerator
       Parser
+      Translate
+      TranslateAux
   other-modules:
       Paths_llvm_ir_to_functional
   autogen-modules:
@@ -47,6 +50,7 @@ library
       array
     , base
     , bytestring
+    , mtl
   default-language: Haskell2010
 
 executable llvm-ir-to-functional-exe
@@ -64,6 +68,7 @@ executable llvm-ir-to-functional-exe
       base >=4.7 && <5
     , bytestring
     , llvm-ir-to-functional
+    , mtl
   default-language: Haskell2010
 
 test-suite llvm-ir-to-functional-test

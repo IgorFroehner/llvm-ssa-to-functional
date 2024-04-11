@@ -1,9 +1,10 @@
 module Main (main) where
 
 import Lexer
-import Parser ( parseLLVMIR )
+import Parser (parseLLVMIR)
 import GraphViz (genAst)
 import BeatyPrint (beautyPrint)
+import Translate (translate)
 
 import qualified Data.ByteString.Lazy as BL
 import System.Environment (getArgs)
@@ -21,11 +22,12 @@ main = do
             s <- BL.readFile file
             case runAlex s parseLLVMIR of
                 Left err -> putStrLn err
-                Right ast -> writeFile "beauty.out" (beautyPrint ast)
+                Right ast -> putStrLn (beautyPrint ast)
+                -- Right ast -> writeFile "beauty.out" (beautyPrint ast)
         (file:_) -> do
             s <- BL.readFile file
-            print $ runAlex s parseLLVMIR
+            -- print $ runAlex s parseLLVMIR
             case runAlex s parseLLVMIR of
                 Left err -> putStrLn err
-                Right ast -> print ast
+                Right ast -> putStrLn (translate ast)
         [] -> putStrLn "Usage: stack run -- <file>"

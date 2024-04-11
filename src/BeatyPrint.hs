@@ -1,12 +1,9 @@
 module BeatyPrint (beautyPrint) where
 
 import Lexer
+import TranslateAux
 
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Ast
-
-unpack :: LBS.ByteString -> String
-unpack = LBS.unpack
 
 beautyPrint :: [Ast.Function Range] -> String
 beautyPrint = concatMap function
@@ -17,7 +14,9 @@ function (Ast.FunctionDec _ _ (Ast.GName _ name) args) = "F Dec" ++ unpack name 
 function _ = "Unknown\n"
 
 unargs :: [Ast.ArgumentDef Range] -> String
-unargs = concatMap unarg
+unargs [a] = unarg a
+unargs (a:x) = unarg a ++ ", " ++ unargs x
+unargs [] = ""
 
 -- ArgumentDef a (Type a) (Maybe (Name a))
 unarg :: Ast.ArgumentDef Range -> String
@@ -43,8 +42,7 @@ brargs ((_,b):x) = unvalue b ++ ", " ++ brargs x
 brargs [] = ""
 
 unphis :: [Ast.PhiDec Range] -> String
-unphis (a:x) = unphis x ++ unphi a
-unphis [] = ""
+unphis = concatMap unphi
 
 unphi :: Ast.PhiDec Range -> String
 unphi (Ast.PhiDec _ name (Ast.Phi _ _ args)) = "  Phi " ++ uname name ++ " = phi(" ++ phiargs args ++ ")\n"
@@ -63,8 +61,8 @@ unreturn (Ast.Return _ _ Nothing) = "  Return void"
 
 undec :: Ast.Dec Range -> String
 undec (Ast.DecCall _ name call) = "  Dec " ++ uname name ++ " = " ++ uncall call ++ "\n"
-undec (Ast.DecIcmp _ name icmp) = "  Dec " ++ uname name ++ " = " ++ unicmp icmp ++ "\n"
-undec (Ast.DecBinOp _ name binop) = "  Dec " ++ uname name ++ " = " ++ unbinop binop ++ "\n"
+undec (Ast.DecIcmp _ name icmp) = "  Dec " ++ uname name ++ " = " ++ translateICMP icmp ++ "\n"
+undec (Ast.DecBinOp _ name binop) = "  Dec " ++ uname name ++ " = " ++ translateBinOp binop ++ "\n"
 undec (Ast.DecConvOp _ name convop) = "  Dec " ++ uname name ++ " = " ++ unconvop convop ++ "\n"
 undec (Ast.DecSelect _ name select) = "  Dec " ++ uname name ++ " = " ++ unselect select ++ "\n"
 
@@ -74,18 +72,12 @@ uncall (Ast.Call _ _ (Ast.GName _ name) args) = "  Call " ++ unpack name ++ "(" 
 uncall _ = "Unknown"
 
 callargs :: [Ast.CallArgument Range] -> String
-callargs (a:x) = callargs x ++ callarg a
+callargs (a:x) = callarg a ++ ", " ++ callargs x
 callargs [] = ""
 
 -- CallArgument a (Type a) (Value a)
 callarg :: Ast.CallArgument Range -> String
 callarg (Ast.CallArgument _ _ value) = unvalue value
-
-unicmp :: Ast.Icmp Range -> String
-unicmp (Ast.Icmp _ (Ast.Cmp _ cmp) _ value1 value2) = "icmp " ++ unpack cmp ++ " " ++ unvalue value1 ++ ", " ++ unvalue value2
-
-unbinop :: Ast.BinOpCall Range -> String
-unbinop (Ast.BinOpCall _ (Ast.BinOp _ binop) _ value1 value2) = "binop " ++ unpack binop ++ " " ++ unvalue value1 ++ ", " ++ unvalue value2
 
 unconvop :: Ast.ConvOpCall Range -> String
 unconvop (Ast.ConvOpCall _ (Ast.ConvOp _ convop) _ value _) = "convop " ++ unpack convop ++ " " ++ unvalue value
@@ -99,11 +91,3 @@ phiargs [] = ""
 
 phiarg :: (Ast.Value Range, Ast.Name Range) -> String
 phiarg (value, name) = "(" ++ uname name ++ ", " ++ unvalue value ++ ")"
-
-unvalue :: Ast.Value Range -> String
-unvalue (Ast.ValueInt (Ast.IntegerValue _ int)) = show int
-unvalue (Ast.ValueName name) = uname name
-
-uname :: Ast.Name Range -> String
-uname (Ast.LName _ name) = unpack name
-uname (Ast.GName _ name) = unpack name
