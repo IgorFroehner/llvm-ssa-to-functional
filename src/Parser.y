@@ -190,9 +190,9 @@ cmpDef :: { Cmp L.Range }
 brCall :: { Br L.Range }
   : br brArguments { Br (L.rtRange $1) $2 }
 
-brArguments :: { [(Type L.Range, Value L.Range)] }
-  : typeAnotation value ',' brArguments                                 { [($1, $2)] ++ $4 }
-  | typeAnotation value                                                 { [($1, $2)] }
+brArguments :: { [(Type L.Range, Name L.Range)] }
+  : typeAnotation lname ',' brArguments                                 { [($1, $2)] ++ $4 }
+  | typeAnotation lname                                                 { [($1, $2)] }
 
 binOpCall :: { BinOpCall L.Range }
   : binOperation typeAnotation value ',' value { BinOpCall (info $1 <-> info $5) $1 $2 $3 $5 }

@@ -96,7 +96,7 @@ data Cmp a
   deriving (Foldable, Show)
 
 data Br a
-  = Br a [(Type a, Value a)]
+  = Br a [(Type a, Name a)]
   deriving (Foldable, Show)
 
 data BinOp a

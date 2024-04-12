@@ -36,9 +36,9 @@ unflow (Just (Ast.FlowBranch (Ast.Br _ args))) = "  Br " ++ brargs args ++ "\n"
 unflow (Just (Ast.FlowReturn ret)) = unreturn ret ++ "\n"
 unflow Nothing = ""
 
-brargs :: [(Ast.Type Range, Ast.Value Range)] -> String
-brargs [(_,b)] = unvalue b
-brargs ((_,b):x) = unvalue b ++ ", " ++ brargs x
+brargs :: [(Ast.Type Range, Ast.Name Range)] -> String
+brargs [(_,b)] = uname b
+brargs ((_,b):x) = uname b ++ ", " ++ brargs x
 brargs [] = ""
 
 unphis :: [Ast.PhiDec Range] -> String
