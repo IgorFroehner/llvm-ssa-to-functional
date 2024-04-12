@@ -94,14 +94,14 @@ safe_div' n d = let in
           else nonzero
     in f
 
-safe_div'' n d = let in
+safe_div'' an ad = let in
   let 
     f =
       let
-        a = if d == 0 then 1 else 0
-        b = n `div` d
-        c = if a /= 0 then (-1) else b
-      in c
+        a1 = if ad == 0 then 1 else 0
+        a2 = an `div` ad
+        a3 = if a1 /= 0 then (-1) else a2
+      in a3
     in f
 
 safe_div''' an ad = let in
@@ -113,3 +113,40 @@ safe_div''' an ad = let in
         a3 = if a1 /= 0 then (-1) else a2
       in a3
     in f
+
+square ax = let in
+  let 
+    f =
+      let
+        a1 = ax * ax
+      in a1
+    in f
+
+no_overflow_square ax = let in
+  let 
+    f =
+      let
+        a1 = ax
+        a2 = a1 * a1
+      in a2
+    in f
+
+pow ax ay = let in
+  let
+    fstart =
+      let
+        loop_start ai0 ar0 =
+          let
+            done = if ai0 == ay then 1 else 0
+            exit = let in ar0
+            loop = let
+                arnew = ar0 * ax
+                ainew = ai0 + 1
+              in if done == 1
+                then exit
+                else loop_start ainew arnew
+          in if done == 1
+            then exit
+            else loop
+      in loop_start 0 1
+    in fstart

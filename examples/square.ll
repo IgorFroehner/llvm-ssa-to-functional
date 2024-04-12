@@ -6,7 +6,6 @@ define i32 @square(i32 %x) {
 define i64 @no_overflow_square(i32 %x) {
   %1 = sext i32 %x to i64
   %2 = mul i64 %1, %1
-  %r.new = mul i32 %r.0, %x
 
   ret i64 %2
 }
