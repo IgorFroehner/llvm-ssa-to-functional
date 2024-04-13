@@ -24,14 +24,13 @@ placeFunctionArg (Ast.ArgumentDef _ _ (Just name)) = normalizeName name
 placeFunctionArg (Ast.ArgumentDef _ _ Nothing) = "-"
 
 translateBlocks :: [Ast.BasicBlock Range] -> String
-translateBlocks = concatMap translateBlock
+translateBlocks blocks = translateBlock blocks (head blocks)
 
--- BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a] (Maybe (Flow a))
-translateBlock :: Ast.BasicBlock Range -> String
-translateBlock (Ast.BasicBlock _ Nothing phis stmts (Just flow)) = blockString "f" (getArgsFromPhis phis) (translateStmts stmts) (translateFlow flow) "f"
-translateBlock (Ast.BasicBlock _ (Just label) phis stmts (Just flow)) = blockString (normalizeBlockName label) (getArgsFromPhis phis) (translateStmts stmts) (translateFlow flow) (normalizeBlockName label)
-translateBlock (Ast.BasicBlock _ Nothing phis stmts Nothing) = blockString "f" (getArgsFromPhis phis) (translateStmts stmts) "" "f"
-translateBlock (Ast.BasicBlock _ (Just label) phis stmts Nothing) = blockString (normalizeBlockName label) (getArgsFromPhis phis) (translateStmts stmts) "" (normalizeBlockName label)
+translateBlock :: [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> String
+translateBlock blocks (Ast.BasicBlock _ Nothing phis stmts (Just flow)) = blockString "f" (getArgsFromPhis phis) (translateStmts stmts) (inlineCalledBlocks blocks flow) (translateFlow flow) "f"
+translateBlock blocks (Ast.BasicBlock _ (Just label) phis stmts (Just flow)) = blockString (normalizeBlockName label) (getArgsFromPhis phis) (translateStmts stmts) (inlineCalledBlocks blocks flow) (translateFlow flow) (normalizeBlockName label)
+translateBlock _ (Ast.BasicBlock _ Nothing phis stmts Nothing) = blockString "f" (getArgsFromPhis phis) (translateStmts stmts) "" "" "f"
+translateBlock _ (Ast.BasicBlock _ (Just label) phis stmts Nothing) = blockString (normalizeBlockName label) (getArgsFromPhis phis) (translateStmts stmts) "" "" (normalizeBlockName label)
 
 getArgsFromPhis :: [Ast.PhiDec Range] -> String
 getArgsFromPhis (phi:x) = getArgFromPhi phi ++ " " ++ getArgsFromPhis x
@@ -79,11 +78,11 @@ functionString :: String -> String -> String -> String
 functionString = printf "%s %s= let in\n\
                         \%s"
 
-blockString :: String -> String -> String -> String -> String -> String
+blockString :: String -> String -> String -> String -> String -> String -> String
 blockString = printf "  let \n\
                      \    %s %s=\n\
                      \      let\n\
-                     \%s %s\
+                     \%s %s %s\
                      \    in %s\n"
 
 decString :: String -> String -> String
@@ -92,16 +91,19 @@ decString = printf "        %s = %s\n"
 returnString :: String -> String
 returnString = printf "     in %s\n"
 
-findBlock :: [Ast.Function Range] -> String -> Ast.BasicBlock Range
-findBlock (a:x) name = case findBlockInFunction a name of
-  Just block -> block
-  Nothing -> findBlock x name
+inlineCalledBlocks :: [Ast.BasicBlock Range] -> Ast.Flow Range -> String
+inlineCalledBlocks blocks (Ast.FlowBranch br) = calledBlocks blocks br
+inlineCalledBlocks _ (Ast.FlowReturn _) = ""
 
-findBlockInFunction :: Ast.Function Range -> String -> Maybe (Ast.BasicBlock Range)
-findBlockInFunction (Ast.FunctionDef _ _ _ _ blocks) name = findBlockInBlocks blocks name
+calledBlocks :: [Ast.BasicBlock Range] -> Ast.Br Range -> String
+calledBlocks blocks (Ast.Br _ [(_, name)]) = translateBlock blocks (findBlock blocks (normalizeBlockName name))
+-- calledBlocks blocks (Ast.Br _ ((_,name1):(_,name2):_)) = translateBlock blocks (findBlock blocks (normalizeBlockName name1)) ++ translateBlock blocks (findBlock blocks (normalizeBlockName name2))
+calledBlocks _ (Ast.Br _ _) = "calmo"
 
-findBlockInBlocks :: [Ast.BasicBlock Range] -> String -> Maybe (Ast.BasicBlock Range)
-findBlockInBlocks (a:x) name = if (getLabel a) == name then Just a else findBlockInBlocks x name
+findBlock :: [Ast.BasicBlock Range] -> String -> Ast.BasicBlock Range
+findBlock (a:x) name = if getLabel a == name then a else findBlock x name
+findBlock [] name = error (printf "Block %s not found" name)
 
 getLabel :: Ast.BasicBlock Range -> String
-getLabel (Ast.BasicBlock _ (Just label) _ _ _) = uname label
+getLabel (Ast.BasicBlock _ (Just label) _ _ _) = normalizeBlockName label
+getLabel (Ast.BasicBlock _ Nothing _ _ _) = ""
