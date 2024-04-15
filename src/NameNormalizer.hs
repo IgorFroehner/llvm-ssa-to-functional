@@ -14,20 +14,11 @@ normalizeBlockName :: Ast.Name Lexer.Range -> String
 normalizeBlockName (Ast.GName _ name) = "f" ++ removePunc (unpack name)
 normalizeBlockName (Ast.LName _ name) = "f" ++ removePunc (unpack name)
 
-removeFirst :: String -> String
-removeFirst [] = []
-removeFirst (_:x) = x
-
-unpack :: LBS.ByteString -> String
-unpack = LBS.unpack
-
-removeLast :: String -> String
-removeLast [_] = []
-removeLast (x:xs) = x : removeLast xs
-removeLast [] = []
-
 removePunc :: String -> String
 removePunc = filter (`notElem` punctuation)
   where
     punctuation :: [Char]
-    punctuation = ",.?!-:;\"'%"
+    punctuation = ",.?!-:;\"'%@"
+
+unpack :: LBS.ByteString -> String
+unpack = LBS.unpack
