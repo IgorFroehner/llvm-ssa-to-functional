@@ -98,11 +98,11 @@ inlinedBlockString = printf "        %s %s= let\n\
 
 brIfString :: String -> String -> String -> String
 brIfString = printf "      in if %s == 1\n\
-                    \          then %s\n\
-                    \          else %s\n"
+                    \        then %s\n\
+                    \        else %s\n"
 
 translateBranch :: Ast.Br Range -> String
-translateBranch (Ast.Br _ [(_, name)]) = "in " ++ normalizeBlockName name
+translateBranch (Ast.Br _ [(_, name)]) = "        in " ++ normalizeBlockName name ++ "\n"
 translateBranch (Ast.Br _ ((_, cond):(_, name1):(_, name2):_)) = brIfString (normalizeName cond) (normalizeBlockName name1) (normalizeBlockName name2)
 translateBranch _ = "Unkown branch type"
 
