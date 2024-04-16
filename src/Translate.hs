@@ -67,7 +67,7 @@ translateArgs ((Ast.CallArgument _ _ value):x) = unvalue value ++ " " ++ transla
 translateArgs [] = ""
 
 translateFlow :: Ast.Flow Range -> String
-translateFlow (Ast.FlowBranch _) = "       calmo\n"
+translateFlow (Ast.FlowBranch br) = translateBranch br
 translateFlow (Ast.FlowReturn ret) = translateReturn ret
 
 translateReturn :: Ast.Return Range -> String
@@ -82,23 +82,43 @@ blockString :: String -> String -> String -> String -> String -> String -> Strin
 blockString = printf "  let \n\
                      \    %s %s=\n\
                      \      let\n\
-                     \%s %s %s\
+                     \%s%s%s\
                      \    in %s\n"
 
 decString :: String -> String -> String
 decString = printf "        %s = %s\n"
 
 returnString :: String -> String
-returnString = printf "     in %s\n"
+returnString = printf "      in %s\n"
+
+inlinedBlockString :: String -> String -> String -> String -> String
+inlinedBlockString = printf "        %s %s= let\n\
+                            \        %s\
+                            \        %s"
+
+brIfString :: String -> String -> String -> String
+brIfString = printf "      in if %s == 1\n\
+                    \          then %s\n\
+                    \          else %s\n"
+
+translateBranch :: Ast.Br Range -> String
+translateBranch (Ast.Br _ [(_, name)]) = "in " ++ normalizeBlockName name
+translateBranch (Ast.Br _ ((_, cond):(_, name1):(_, name2):_)) = brIfString (normalizeName cond) (normalizeBlockName name1) (normalizeBlockName name2)
+translateBranch _ = "Unkown branch type"
 
 inlineCalledBlocks :: [Ast.BasicBlock Range] -> Ast.Flow Range -> String
 inlineCalledBlocks blocks (Ast.FlowBranch br) = calledBlocks blocks br
 inlineCalledBlocks _ (Ast.FlowReturn _) = ""
 
 calledBlocks :: [Ast.BasicBlock Range] -> Ast.Br Range -> String
-calledBlocks blocks (Ast.Br _ [(_, name)]) = translateBlock blocks (findBlock blocks (normalizeBlockName name))
--- calledBlocks blocks (Ast.Br _ ((_,name1):(_,name2):_)) = translateBlock blocks (findBlock blocks (normalizeBlockName name1)) ++ translateBlock blocks (findBlock blocks (normalizeBlockName name2))
-calledBlocks _ (Ast.Br _ _) = "calmo"
+calledBlocks blocks (Ast.Br _ [(_, name)]) = translateInlineBlock (findBlock blocks (normalizeBlockName name))
+calledBlocks blocks (Ast.Br _ ((_, _):(_, name1):(_, name2):_)) = translateInlineBlock (findBlock blocks (normalizeBlockName name1)) ++ translateInlineBlock (findBlock blocks (normalizeBlockName name2))
+calledBlocks _ (Ast.Br _ _) = "Unkown branch type"
+
+translateInlineBlock :: Ast.BasicBlock Range -> String
+translateInlineBlock (Ast.BasicBlock _ (Just label) phis stmts (Just flow)) = inlinedBlockString (normalizeBlockName label) (getArgsFromPhis phis) (translateStmts stmts) (translateFlow flow)
+translateInlineBlock (Ast.BasicBlock _ (Just label) phis stmts Nothing) = inlinedBlockString (normalizeBlockName label) (getArgsFromPhis phis) (translateStmts stmts) ""
+translateInlineBlock (Ast.BasicBlock _ Nothing _ _ _) = "Inlined Blocks must have a label"
 
 findBlock :: [Ast.BasicBlock Range] -> String -> Ast.BasicBlock Range
 findBlock (a:x) name = if getLabel a == name then a else findBlock x name

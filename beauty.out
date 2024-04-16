@@ -1,8 +1,0 @@
-F Def @safe_div(%n, %d):
-  Dec %1 = if %d == 0 then 1 else 0
-  Br %1, %iszero, %nonzero
-Block iszero:
-  Return (-1)
-Block nonzero:
-  Dec %2 = %n `div` %d
-  Return %2

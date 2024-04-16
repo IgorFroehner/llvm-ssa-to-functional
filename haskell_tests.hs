@@ -79,21 +79,6 @@ sequence = let in
         a + b + c
     in f
 
-safe_div' n d = let in
-  let 
-    f =
-      let
-        a = if d == 0 then 1 else 0
-        iszero = let
-                 in -1
-        nonzero = let
-                    b = n `div` d
-                  in b
-        in if a /= 0
-          then iszero
-          else nonzero
-    in f
-
 safe_div'' an ad = let in
   let 
     f =
@@ -102,16 +87,6 @@ safe_div'' an ad = let in
         a2 = an `div` ad
         a3 = if a1 /= 0 then (-1) else a2
       in a3
-    in f
-
-safe_div''' an ad = let in
-  let 
-    f =
-      let
-        a1 = if ad == 0 then 1 else 0
-        a2 = an `div` ad
-        a3 = if a1 /= 0 then (-1) else a2
-       in a3
     in f
 
 square ax = let in
@@ -150,3 +125,18 @@ pow ax ay = let in
             else loop
       in loop_start 0 1
     in fstart
+
+safe_div' an ad = let in
+  let 
+    f =
+      let
+        a1 = if ad == 0 then 1 else 0
+        fiszero = let
+                      in (-1)
+        fnonzero = let
+                a2 = an `div` ad
+              in a2
+      in if a1 == 1
+          then fiszero
+          else fnonzero
+    in f

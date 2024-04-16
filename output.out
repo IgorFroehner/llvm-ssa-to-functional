@@ -1,7 +1,0 @@
-F Def @safe_div:
-  Dec %1 = icmp eq %d, 0
-Block iszero:
-  Return -1
-Block nonzero:
-  Dec %2 = binop udiv %n, %d
-  Return %2
