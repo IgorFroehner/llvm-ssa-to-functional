@@ -4,9 +4,11 @@
 In the LLVM IR we have the following structure:
 
 ```
-Function (name, arguments):
-    Blocks (option label):
-        Statements...
+Function (name, arguments): [
+    Blocks (option label): [
+        Operations...
+    ]
+]
 ```
 
 Then it translated to Haskell like in ANF:
