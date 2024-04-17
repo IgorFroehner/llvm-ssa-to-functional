@@ -72,11 +72,11 @@ translateFlow (Ast.FlowReturn ret) = translateReturn ret
 
 translateReturn :: Ast.Return Range -> String
 translateReturn (Ast.Return _ _ (Just value)) = returnString (unvalue value)
-translateReturn (Ast.Return _ _ Nothing) = ""
+translateReturn (Ast.Return _ _ Nothing) = returnString "0"
 
 functionString :: String -> String -> String -> String
 functionString = printf "%s %s= let in\n\
-                        \%s"
+                        \%s\n"
 
 blockString :: String -> String -> String -> String -> String -> String -> String
 blockString = printf "  let \n\
