@@ -15,25 +15,25 @@ Then it translated to Haskell like in ANF:
 
 ```ruby
 Function (name, args, blocks):
-    "#{name} #{args} = let in
-       #{translateBlocks blocks}
-     in #{name}"
+    "#{name} #{args} = let in" \
+    "  #{translateBlocks blocks}" \
+    " in #{name}"
 
 Block (label, phis, stmts, flow):
-    "let
-       #{label} #{argsFromPhis phis} =
-         let
-           #{translateStmts stmts}
-           #{inlineCalledBlocks self flow}
-         in #{translateFlows flow}
-       in #{blockCall block}"
+    "let" \
+    "  #{label} #{argsFromPhis phis} = " \
+    "    let" \
+    "      #{translateStmts stmts}" \
+    "      #{inlineCalledBlocks self flow}" \
+    "    in #{translateFlows flow}" \
+    "  in #{blockCall block}" \
 
 Flow:
     {
         Br (cond, dest1, dest2):
-            "if #{cond} == 1
-               then dest1
-               else dest2"
+            "if #{cond} == 1" \
+            "  then dest1" \
+            "  else dest2" \
         Return (var):
             "in #{var}"
     }
