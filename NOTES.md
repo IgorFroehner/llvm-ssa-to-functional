@@ -22,6 +22,7 @@ Block (label, phis, stmts, flow):
        #{label} #{argsFromPhis phis} =
          let
            #{translateStmts stmts}
+           #{inlineCalledBlocks self flow}
          in #{translateFlows flow}
        in #{blockCall block}"
 
