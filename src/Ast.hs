@@ -26,11 +26,9 @@ module Ast (
   Flow(..)
 ) where
 
-import Data.ByteString.Lazy.Char8 (ByteString)
-
 data Name a
-  = LName a ByteString
-  | GName a ByteString
+  = LName a String
+  | GName a String
   deriving (Foldable, Show)
 
 data IntegerValue a
@@ -43,7 +41,7 @@ data Value a
   deriving (Foldable, Show)
 
 data Type a
-  = Type a ByteString
+  = Type a String
   deriving (Foldable, Show)
 
 data Call a
@@ -80,7 +78,7 @@ data Function a
   deriving (Foldable, Show)
 
 data BasicBlock a
-  = BasicBlock a (Maybe (Name a)) [PhiDec a] [Stmt a] (Maybe (Flow a))
+  = BasicBlock a (Name a) [PhiDec a] [Stmt a] (Maybe (Flow a))
   deriving (Foldable, Show)
 
 data Phi a
@@ -92,15 +90,15 @@ data Icmp a
   deriving (Foldable, Show)
 
 data Cmp a
-  = Cmp a ByteString
+  = Cmp a String
   deriving (Foldable, Show)
 
 data Br a
-  = Br a [(Type a, Name a)]
+  = Br a [Name a]
   deriving (Foldable, Show)
 
 data BinOp a
-  = BinOp a ByteString
+  = BinOp a String
   deriving (Foldable, Show)
 
 data BinOpCall a
@@ -108,7 +106,7 @@ data BinOpCall a
   deriving (Foldable, Show)
 
 data ConvOp a
-  = ConvOp a ByteString
+  = ConvOp a String
   deriving (Foldable, Show)
 
 data ConvOpCall a

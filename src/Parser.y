@@ -9,6 +9,7 @@ import Data.Monoid (First (..))
 
 import qualified Lexer as L
 import Ast
+import NameNormalizer
 }
 
 %name parseLLVMIR
@@ -93,21 +94,21 @@ blocks :: { [BasicBlock L.Range] }
   |                                  { [] }
 
 block :: { BasicBlock L.Range }
-  : blockLabel phiDecs stmts branch  { BasicBlock (info $1 <-> info (head $3)) (Just $1) $2 $3 (Just $4) }
-  | blockLabel phiDecs stmts         { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $3 Nothing }
-  | blockLabel phiDecs branch        { BasicBlock (info $1 <-> info (head $2)) (Just $1) $2 [] (Just $3) }
-  | blockLabel stmts branch          { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $2 (Just $3) }
-  | blockLabel phiDecs               { BasicBlock (info $1 <-> info (head $2)) (Just $1) $2 [] Nothing }
-  | blockLabel branch                { BasicBlock (info $1 <-> info $1) (Just $1) [] [] (Just $2) }
-  | blockLabel stmts                 { BasicBlock (info $1 <-> info (head $2)) (Just $1) [] $2 Nothing }
+  : blockLabel phiDecs stmts branch  { BasicBlock (info $1 <-> info (head $3)) $1 $2 $3 (Just $4) }
+  | blockLabel phiDecs stmts         { BasicBlock (info $1 <-> info (head $2)) $1 [] $3 Nothing }
+  | blockLabel phiDecs branch        { BasicBlock (info $1 <-> info (head $2)) $1 $2 [] (Just $3) }
+  | blockLabel stmts branch          { BasicBlock (info $1 <-> info (head $2)) $1 [] $2 (Just $3) }
+  | blockLabel phiDecs               { BasicBlock (info $1 <-> info (head $2)) $1 $2 [] Nothing }
+  | blockLabel branch                { BasicBlock (info $1 <-> info $1) $1 [] [] (Just $2) }
+  | blockLabel stmts                 { BasicBlock (info $1 <-> info (head $2)) $1 [] $2 Nothing }
 
 blockLabel :: { Name L.Range }
-  : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range label) }
+  : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeBlockName label)) }
 
 initialStatementsBlock :: { BasicBlock L.Range }
-  : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1 (Just $2) }
-  | branch                           { BasicBlock (info $1) Nothing [] [] (Just $1) }
-  | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) Nothing [] $1 Nothing }
+  : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "1") [] $1 (Just $2) }
+  | branch                           { BasicBlock (info $1) (LName (info $1) "1") [] [] (Just $1) }
+  | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "1") [] $1 Nothing }
 
 branch :: { Flow L.Range }
   : brCall                           { FlowBranch $1 }
@@ -131,11 +132,11 @@ phiDecs :: { [PhiDec L.Range] }
 
 -- Local names are prefixed with a '%'.
 lname :: { Name L.Range }
-  : lidentifier                      { unTok $1 (\range (L.LIdentifier name) -> LName range name) }
+  : lidentifier                      { unTok $1 (\range (L.LIdentifier name) -> LName range (normalizeName name)) }
 
 -- Global names are prefixed with a '@'.
 gname :: { Name L.Range }
-  : gidentifier                      { unTok $1 (\range (L.GIdentifier name) -> GName range name) }
+  : gidentifier                      { unTok $1 (\range (L.GIdentifier name) -> GName range (normalizeName name)) }
 
 integerValue :: { IntegerValue L.Range }
   : integer                          { unTok $1 (\range (L.Integer value) -> IntegerValue range value) }
@@ -145,7 +146,7 @@ value :: { Value L.Range }
   | integerValue { ValueInt $1 }
 
 typeAnotation :: { Type L.Range }
-  : type                             { unTok $1 (\range (L.Type typeName) -> Type range typeName) }
+  : type                             { unTok $1 (\range (L.Type typeName) -> Type range (normalizeName typeName)) }
 
 -- Operations
 
@@ -185,26 +186,26 @@ icmpCall :: { Icmp L.Range }
   : icmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
 
 cmpDef :: { Cmp L.Range }
-  : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range cmp) }
+  : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range (normalizeName cmp)) }
 
 brCall :: { Br L.Range }
   : br brArguments { Br (L.rtRange $1) $2 }
 
-brArguments :: { [(Type L.Range, Name L.Range)] }
-  : typeAnotation lname ',' brArguments                                 { [($1, $2)] ++ $4 }
-  | typeAnotation lname                                                 { [($1, $2)] }
+brArguments :: { [Name L.Range] }
+  : typeAnotation lname ',' brArguments                                 { [$2] ++ $4 }
+  | typeAnotation lname                                                 { [$2] }
 
 binOpCall :: { BinOpCall L.Range }
   : binOperation typeAnotation value ',' value { BinOpCall (info $1 <-> info $5) $1 $2 $3 $5 }
 
 binOperation :: { BinOp L.Range }
-  : binOp { unTok $1 (\range (L.BinOp op) -> BinOp range op) }
+  : binOp { unTok $1 (\range (L.BinOp op) -> BinOp range (normalizeName op)) }
 
 convOpCall :: { ConvOpCall L.Range }
   : convOperation typeAnotation value to typeAnotation { ConvOpCall (info $1 <-> info $5) $1 $2 $3 $5 }
 
 convOperation :: { ConvOp L.Range }
-  : convOp { unTok $1 (\range (L.ConvOp op) -> ConvOp range op) }
+  : convOp { unTok $1 (\range (L.ConvOp op) -> ConvOp range (normalizeName op)) }
 
 selectCall :: { Select L.Range }
   : select typeAnotation value ',' typeAnotation value ',' typeAnotation value { Select (L.rtRange $1 <-> info $6) $2 $3 $6 $9 }

@@ -43,6 +43,7 @@ library:
   - base
   - bytestring
   - mtl
+  - fgl
   build-tools:
   - alex
   - happy
@@ -59,6 +60,7 @@ executables:
     - llvm-ir-to-functional
     - bytestring
     - mtl
+    - fgl
 
 tests:
   llvm-ir-to-functional-test:

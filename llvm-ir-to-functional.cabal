@@ -27,6 +27,7 @@ library
   exposed-modules:
       Ast
       BeatyPrint
+      Dominance
       GraphViz
       Lexer
       Lib
@@ -51,6 +52,7 @@ library
       array
     , base
     , bytestring
+    , fgl
     , mtl
   default-language: Haskell2010
 
@@ -68,6 +70,7 @@ executable llvm-ir-to-functional-exe
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , fgl
     , llvm-ir-to-functional
     , mtl
   default-language: Haskell2010

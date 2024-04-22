@@ -1,18 +1,14 @@
 
 module NameNormalizer (normalizeName, normalizeBlockName) where
 
-import qualified Lexer
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import Data.ByteString.Lazy.Char8 (ByteString)
 
-import qualified Ast
+normalizeName :: ByteString -> String
+normalizeName name = "a" ++ removePunc (unpack name)
 
-normalizeName :: Ast.Name Lexer.Range -> String
-normalizeName (Ast.GName _ name) = removePunc (unpack name)
-normalizeName (Ast.LName _ name) = "a" ++ removePunc (unpack name)
-
-normalizeBlockName :: Ast.Name Lexer.Range -> String
-normalizeBlockName (Ast.GName _ name) = "f" ++ removePunc (unpack name)
-normalizeBlockName (Ast.LName _ name) = "f" ++ removePunc (unpack name)
+normalizeBlockName :: ByteString -> String
+normalizeBlockName name = "f" ++ removePunc (unpack name)
 
 removePunc :: String -> String
 removePunc = filter (`notElem` punctuation)
