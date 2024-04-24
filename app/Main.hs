@@ -2,7 +2,7 @@ module Main (main) where
 
 import Lexer
 import Parser (parseLLVMIR)
--- import GraphViz (genAst)
+import GraphViz (plotControlGraph)
 import BeatyPrint (beautyPrint)
 import Translate (translate)
 
@@ -18,13 +18,20 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
-        ("--graph":file:_) -> do
+        ("--graph-viz":file:_) -> do
             s <- BL.readFile file
             case runAlex s parseLLVMIR of
                 Left err -> putStrLn err
                 Right ast -> do
                     let g = buildGraph (head ast)
-                    print $ show g
+                    writeFile "control-graph.dot" (plotControlGraph g)
+        ("--dominance-viz":file:_) -> do
+            s <- BL.readFile file
+            case runAlex s parseLLVMIR of
+                Left err -> putStrLn err
+                Right ast -> do
+                    let g = buildGraph (head ast)
+                    putStrLn $ plotControlGraph g
         ("--beauty":file:_) -> do
             s <- BL.readFile file
             case runAlex s parseLLVMIR of

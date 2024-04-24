@@ -103,7 +103,7 @@ block :: { BasicBlock L.Range }
   | blockLabel stmts                 { BasicBlock (info $1 <-> info (head $2)) $1 [] $2 Nothing }
 
 blockLabel :: { Name L.Range }
-  : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeBlockName label)) }
+  : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeName label)) }
 
 initialStatementsBlock :: { BasicBlock L.Range }
   : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "1") [] $1 (Just $2) }

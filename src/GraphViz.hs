@@ -1,12 +1,29 @@
 
 module GraphViz (
     -- genAst
+    plotControlGraph
     ) where
 
 import Lexer
-
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Ast
+
+import Data.Graph.Inductive.PatriciaTree
+import Data.Graph.Inductive.Graph (labNodes, labEdges, LNode, LEdge)
+
+-- GraphViz the Control Flow Graph
+
+nodeToDot :: LNode String -> String
+nodeToDot (n, label) = "  " ++ show n ++ " [label=\"" ++ label ++ "\"];\n"
+
+edgeToDot :: LEdge () -> String
+edgeToDot (source, target, _) = "  " ++ show source ++ " -> " ++ show target ++ ";\n"
+
+plotControlGraph :: Gr String () -> String
+plotControlGraph graph = "digraph {\n" ++ nodes ++ edges ++ "}\n"
+  where
+    nodes = concatMap nodeToDot (labNodes graph)
+    edges = concatMap edgeToDot (labEdges graph)
 
 -- genAst :: [Ast.Function Range] -> String
 -- genAst (a:_) = functions a
