@@ -14,10 +14,16 @@ stack build
 stack run -- <file_path.ll>
 ```
 
-#### Beauty Print the Parsed AST
+#### Generate a DOT File `control-graph.dot` for the Control Graph
 
 ```
-stack run -- --beauty <file_path.ll>
+stack run -- --graph-viz <file_path.ll>
+```
+
+#### Generate a DOT File `dominance.dot` with the Dominance Tree of the Control Graph
+
+```
+stack run -- --dominance-viz <file_path.ll>
 ```
 
 #### Generate a graphviz file to generate a graphical version of the AST
