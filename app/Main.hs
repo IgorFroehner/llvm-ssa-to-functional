@@ -2,17 +2,17 @@ module Main (main) where
 
 import Lexer
 import Parser (parseLLVMIR)
-import GraphViz (plotControlGraph)
+import GraphViz (plotControlGraph, plotDominanceTree)
 import BeatyPrint (beautyPrint)
 import Translate (translate)
 
 import qualified Data.ByteString.Lazy as BL
 import System.Environment (getArgs)
 
+import Data.Graph.Inductive.Query.Dominators (iDom)
 import Data.Graph.Inductive.Graph (mkGraph)
 import Data.Graph.Inductive.PatriciaTree
-import Data.Graph.Inductive.Query.Dominators (iDom)
-import Dominance (buildGraph)
+import Dominance (buildGraph, dominance)
 
 main :: IO ()
 main = do
@@ -31,7 +31,7 @@ main = do
                 Left err -> putStrLn err
                 Right ast -> do
                     let g = buildGraph (head ast)
-                    putStrLn $ plotControlGraph g
+                    writeFile "dominance.dot" (plotDominanceTree g)
         ("--beauty":file:_) -> do
             s <- BL.readFile file
             case runAlex s parseLLVMIR of

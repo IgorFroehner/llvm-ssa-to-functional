@@ -1,7 +1,8 @@
 
 module GraphViz (
     -- genAst
-    plotControlGraph
+    plotControlGraph,
+    plotDominanceTree
     ) where
 
 import Lexer
@@ -10,6 +11,22 @@ import qualified Ast
 
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph (labNodes, labEdges, LNode, LEdge)
+import Dominance (dominance)
+
+-- GraphViz the Dominance Tree
+
+findNodeLabel :: Int -> [(Int, String)] -> String
+findNodeLabel n nodes = case lookup n nodes of
+  Just label -> label
+  Nothing -> error $ "Node not found: " ++ show n
+
+plotDominanceTree :: Gr String () -> String
+plotDominanceTree g =
+  let 
+    dom = dominance g
+    nodes = labNodes g
+    domLabeled = map (\(a, b) -> (findNodeLabel a nodes, findNodeLabel b nodes)) dom
+  in "digraph {\n" ++ concatMap (\(a, b) -> "  " ++ a ++ " -> " ++ b ++ ";\n") domLabeled ++ "}\n"
 
 -- GraphViz the Control Flow Graph
 

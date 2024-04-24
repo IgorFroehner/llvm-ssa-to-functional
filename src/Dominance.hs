@@ -8,6 +8,14 @@ import Data.Graph.Inductive.Graph (mkGraph)
 import Data.Graph.Inductive.PatriciaTree
 import TranslateAux (uname)
 import Data.List (find)
+import Data.Graph.Inductive.Query.Dominators (iDom)
+
+dominance :: Gr String () -> [(Int, Int)]
+dominance g = let
+    domination = iDom g 0
+  in map (\(a, b) -> (b, a)) domination
+
+-- Build the control graph out of the basic blocks of a function
 
 buildGraph :: Ast.Function Range -> Gr String ()
 buildGraph f = mkGraph nodes edges
@@ -51,8 +59,7 @@ getNodes _ = undefined
 getLabelBlocks :: [Ast.BasicBlock a] -> [String]
 getLabelBlocks = foldr (\ b -> (++) [getLabel b]) []
 
-dominance :: [Ast.Function a] -> [String]
-dominance = undefined
+-- Helper Functions
 
 getLabel :: Ast.BasicBlock a -> String
 getLabel (Ast.BasicBlock _ (Ast.LName _ name) _ _ _) = name
