@@ -16,5 +16,5 @@ assignment :=
     name '=' operation
 
 block :=
-    operation '\n' block
-    assignment '\n' block
+      operation '\n' block
+    | assignment '\n' block

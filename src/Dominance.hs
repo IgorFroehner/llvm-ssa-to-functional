@@ -4,16 +4,21 @@ module Dominance (buildGraph, dominance) where
 import qualified Ast
 import Lexer
 
-import Data.Graph.Inductive.Graph (mkGraph)
 import Data.Graph.Inductive.PatriciaTree
 import TranslateAux (uname)
 import Data.List (find)
 import Data.Graph.Inductive.Query.Dominators (iDom)
+import Data.Graph.Inductive.Graph (mkGraph, labNodes)
 
-dominance :: Gr String () -> [(Int, Int)]
+dominance :: Gr String () -> Gr String ()
 dominance g = let
     domination = iDom g 0
-  in map (\(a, b) -> (b, a)) domination
+    nodes = labNodes g
+    invertDom = map (\(a, b) -> (b, a)) domination
+  in buildDomGraph invertDom nodes
+
+buildDomGraph :: [(Int, Int)] -> [(Int, String)] -> Gr String ()
+buildDomGraph dom nodes = mkGraph nodes (map (\(a, b) -> (a, b, ())) dom)
 
 -- Build the control graph out of the basic blocks of a function
 

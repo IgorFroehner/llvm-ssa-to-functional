@@ -11,6 +11,7 @@ loop_start:
 loop:
   %r.new = mul i32 %r.0, %x
   %i.new = add i32 %i.0, 1
+  %done = icmp eq i32 %i.new, %y
   br i1 %done, label %exit, label %loop
 
 exit:

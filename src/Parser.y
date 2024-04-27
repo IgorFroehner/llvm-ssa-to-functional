@@ -106,9 +106,9 @@ blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeName label)) }
 
 initialStatementsBlock :: { BasicBlock L.Range }
-  : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "1") [] $1 (Just $2) }
-  | branch                           { BasicBlock (info $1) (LName (info $1) "1") [] [] (Just $1) }
-  | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "1") [] $1 Nothing }
+  : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "f1") [] $1 (Just $2) }
+  | branch                           { BasicBlock (info $1) (LName (info $1) "f1") [] [] (Just $1) }
+  | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "f1") [] $1 Nothing }
 
 branch :: { Flow L.Range }
   : brCall                           { FlowBranch $1 }
@@ -199,7 +199,7 @@ binOpCall :: { BinOpCall L.Range }
   : binOperation typeAnotation value ',' value { BinOpCall (info $1 <-> info $5) $1 $2 $3 $5 }
 
 binOperation :: { BinOp L.Range }
-  : binOp { unTok $1 (\range (L.BinOp op) -> BinOp range (normalizeName op)) }
+  : binOp { unTok $1 (\range (L.BinOp op) -> BinOp range (normalizeOp op)) }
 
 convOpCall :: { ConvOpCall L.Range }
   : convOperation typeAnotation value to typeAnotation { ConvOpCall (info $1 <-> info $5) $1 $2 $3 $5 }

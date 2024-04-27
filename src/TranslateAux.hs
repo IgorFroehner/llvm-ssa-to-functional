@@ -26,7 +26,7 @@ abinop (Ast.BinOp _ op) = case op of
   "sdiv" -> " `div` "
   "urem" -> " `mod` "
   "srem" -> " `mod` "
-  _ -> "Unknown"
+  _ -> op
 
 unpack :: LBS.ByteString -> String
 unpack = LBS.unpack
