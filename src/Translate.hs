@@ -14,8 +14,8 @@ import Data.Maybe (fromJust)
 stringfyNode :: Int -> Ast.BasicBlock Range -> String
 stringfyNode = translateBlock
 
-blockSufix :: Int -> Ast.BasicBlock Range -> String
-blockSufix level block = ident level ++ "in " ++ getLabel block ++ "\n"
+blockSufix :: Int -> [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> String
+blockSufix level blocks block = translateFlow level blocks (getFlow block) (getLabel block)
 
 -- Depth-first traversal
 printTree :: Gr String () -> [Ast.BasicBlock Range] -> Node -> [String]
@@ -27,9 +27,10 @@ printTree gr blocks node = dfs 2 node ++ [callInitialBlock] where
       nodeString = stringfyNode depth block
       children = suc gr n
       childLines = concatMap (dfs (depth + 1)) children
-      -- sufix = blockSufix depth block
-    in nodeString : childLines -- ++ [sufix]
-  callInitialBlock = blockSufix 1 (findBlock blocks (fromJust (lab gr node)))
+      sufix = blockSufix depth blocks block
+    in nodeString : childLines ++ [sufix]
+  initialBlock = findBlock blocks (fromJust (lab gr node))
+  callInitialBlock = ident 2 ++ "in " ++ getLabel initialBlock ++ "\n"
 
 translate :: [Ast.Function Range] -> Gr String () -> String
 translate (f:fs) dom = translateFunction f dom ++ translate fs dom
@@ -48,8 +49,7 @@ placeFunctionArg (Ast.ArgumentDef _ _ (Just name)) = nameToString name
 placeFunctionArg (Ast.ArgumentDef _ _ Nothing) = "-"
 
 translateBlock :: Int -> Ast.BasicBlock Range -> String
-translateBlock level (Ast.BasicBlock _ label phis stmts (Just flow)) = blockString level (nameToString label) (getArgsFromPhis phis) (translateStmts (level + 1) stmts) -- "" (translateFlow flow) (nameToString label)
-translateBlock level (Ast.BasicBlock _ label phis stmts Nothing) = blockString level (nameToString label) (getArgsFromPhis phis) (translateStmts (level + 1) stmts) -- "" "" (nameToString label)
+translateBlock level (Ast.BasicBlock _ label phis stmts _) = blockString level (nameToString label) (getArgsFromPhis phis) (translateStmts (level + 1) stmts)
 
 getArgsFromPhis :: [Ast.PhiDec Range] -> String
 getArgsFromPhis (phi:x) = getArgFromPhi phi ++ " " ++ getArgsFromPhis x
@@ -79,31 +79,25 @@ translateCallDec :: Ast.Call Range -> String
 translateCallDec (Ast.Call _ _ name args) = nameToString name ++ " " ++ translateArgs args
 
 translateCall :: Int -> Ast.Call Range -> String
-translateCall level (Ast.Call _ _ name args) = ident level ++ nameToString name ++ " " ++ translateArgs args ++ "\n"
+translateCall level (Ast.Call _ _ name args) = ident level ++ "-- " ++ nameToString name ++ " " ++ translateArgs args ++ "\n"
 
 translateArgs :: [Ast.CallArgument Range] -> String
 translateArgs ((Ast.CallArgument _ _ value):x) = unvalue value ++ " " ++ translateArgs x
 translateArgs [] = ""
 
-translateFlow :: Ast.Flow Range -> String
-translateFlow (Ast.FlowBranch br) = translateBranch br
-translateFlow (Ast.FlowReturn ret) = translateReturn ret
+translateFlow :: Int -> [Ast.BasicBlock Range] -> Ast.Flow Range -> String -> String
+translateFlow level blocks (Ast.FlowBranch br) currentLabel = translateBranch level blocks currentLabel br
+translateFlow level _ (Ast.FlowReturn ret) _ = translateReturn (level + 1) ret
 
-translateReturn :: Ast.Return Range -> String
-translateReturn (Ast.Return _ _ (Just value)) = returnString (unvalue value)
-translateReturn (Ast.Return _ _ Nothing) = returnString "0"
+translateReturn :: Int -> Ast.Return Range -> String
+translateReturn level (Ast.Return _ _ (Just value)) = ident level ++ returnString (unvalue value)
+translateReturn level (Ast.Return _ _ Nothing) = ident level ++ returnString "Nothing"
 
 functionString :: String -> String -> String -> String
 functionString = printf "%s %s=\n  let\n%s"
 
 blockString :: Int -> String -> String -> String -> String -- -> String -> String -> String
-blockString level = printf ((ident level ++ "%s %s=\n") ++
-                            (ident level ++ "  let\n%s"))
-                    --  \%s%s%s\
-                     -- \  in %s\n"
-
-ident :: Int -> String
-ident level = replicate (level * 2) ' '
+blockString level = printf (identEach level ["%s %s=\n", "  let\n%s"])
 
 decString :: Int -> String -> String -> String
 decString level = printf (ident level ++ "%s = %s\n")
@@ -111,15 +105,39 @@ decString level = printf (ident level ++ "%s = %s\n")
 returnString :: String -> String
 returnString = printf "in %s\n"
 
-brIfString :: String -> String -> String -> String
-brIfString = printf "in if %s == 1\n\
-                    \  then %s\n\
-                    \  else %s\n"
+brIfString :: Int -> String -> String -> String -> String -> String -> String
+brIfString l = printf (identEach l ["in if %s == 1\n", "  then %s %s\n", "  else %s %s\n"])
 
-translateBranch :: Ast.Br Range -> String
-translateBranch (Ast.Br _ [name]) = printf "in %s\n" (nameToString name)
-translateBranch (Ast.Br _ (cond:name1:name2:_)) = brIfString (nameToString cond) (nameToString name1) (nameToString name2)
-translateBranch _ = "Unkown branch type"
+gotoString :: Int -> String -> String -> String
+gotoString l = printf (ident l ++ "in %s %s\n")
+
+translateBranch :: Int -> [Ast.BasicBlock Range] -> String -> Ast.Br Range -> String
+translateBranch l blocks currentLabel (Ast.Br _ [name]) = gotoString (l + 1) toLabel callArgs
+  where
+    toLabel = nameToString name
+    toBlock = findBlock blocks toLabel
+    callArgs = callArgumentsFromPhis toBlock currentLabel
+translateBranch l blocks currentLabel (Ast.Br _ (condValue:name1:name2:_)) = brIfString (l + 1) cond toLabel1 callArgs1 toLabel2 callArgs2
+  where
+    cond = nameToString condValue
+    toLabel1 = nameToString name1
+    fromBlock1 = findBlock blocks toLabel1
+    toLabel2 = nameToString name2
+    fromBlock2 = findBlock blocks toLabel2
+    callArgs1 = callArgumentsFromPhis fromBlock1 currentLabel
+    callArgs2 = callArgumentsFromPhis fromBlock2 currentLabel
+translateBranch _ _ _ _ = "Unkown branch type"
+
+callArgumentsFromPhis :: Ast.BasicBlock Range -> String -> String
+callArgumentsFromPhis (Ast.BasicBlock _ _ phis _ _) currentLabel = concatMap (getValueForCurrentLabel currentLabel) phis
+
+getValueForCurrentLabel :: String -> Ast.PhiDec Range -> String
+getValueForCurrentLabel currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabelFromValues values currentLabel
+
+getValueForCurrentLabelFromValues :: [(Ast.Value Range, Ast.Name Range)] -> String -> String
+getValueForCurrentLabelFromValues values currentLabel = case filter (\(_, name) -> nameToString name == currentLabel) values of
+  [(value, _)] -> unvalue value ++ " "
+  _ -> ""
 
 findBlock :: [Ast.BasicBlock Range] -> String -> Ast.BasicBlock Range
 findBlock (a:x) name = if getLabel a == name then a else findBlock x name
@@ -128,6 +146,15 @@ findBlock [] name = error (printf "Block %s not found" name)
 getLabel :: Ast.BasicBlock Range -> String
 getLabel (Ast.BasicBlock _ label _ _ _) = nameToString label
 
+getFlow :: Ast.BasicBlock Range -> Ast.Flow Range
+getFlow (Ast.BasicBlock _ _ _ _ flow) = fromJust flow
+
 nameToString :: Ast.Name Range -> String
 nameToString (Ast.GName _ name) = name
 nameToString (Ast.LName _ name) = name
+
+ident :: Int -> String
+ident level = replicate (level * 2) ' '
+
+identEach :: Int -> [String] -> String
+identEach level = concatMap (ident level ++)

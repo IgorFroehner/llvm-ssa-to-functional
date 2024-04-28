@@ -1,4 +1,9 @@
 
+Some details on the implementation
+
+* implicit name of the first block
+* when the call that makes the value selection is to the imediate dominator and not to the block itself
+
 # Translation
 
 In the LLVM IR we have the following structure:

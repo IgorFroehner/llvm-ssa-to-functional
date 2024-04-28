@@ -4,6 +4,5 @@
 *.dot
 a
 a.hs
-*.ll
 *.cpp
 *.png
