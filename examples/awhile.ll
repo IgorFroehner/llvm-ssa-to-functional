@@ -6,6 +6,7 @@ define dso_local noundef i32 @function(i32 noundef %0, i32 noundef %1) local_unn
 declare i32 @test(i32 noundef, i32 noundef) local_unnamed_addr #1
 
 define dso_local noundef i32 @main() local_unnamed_addr #2 {
+entry:
   br label %1
 
 1:

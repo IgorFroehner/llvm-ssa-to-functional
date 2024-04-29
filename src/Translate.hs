@@ -94,7 +94,7 @@ translateReturn level (Ast.Return _ _ (Just value)) = ident level ++ returnStrin
 translateReturn level (Ast.Return _ _ Nothing) = ident level ++ returnString "Nothing"
 
 functionString :: String -> String -> String -> String
-functionString = printf "%s %s=\n  let\n%s"
+functionString = printf "import Data.Bits\n\n%s %s=\n  let\n%s"
 
 blockString :: Int -> String -> String -> String -> String -- -> String -> String -> String
 blockString level = printf (identEach level ["%s %s=\n", "  let\n%s"])
@@ -135,9 +135,10 @@ getValueForCurrentLabel :: String -> Ast.PhiDec Range -> String
 getValueForCurrentLabel currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabelFromValues values currentLabel
 
 getValueForCurrentLabelFromValues :: [(Ast.Value Range, Ast.Name Range)] -> String -> String
-getValueForCurrentLabelFromValues values currentLabel = case filter (\(_, name) -> nameToString name == currentLabel) values of
-  [(value, _)] -> unvalue value ++ " "
-  _ -> ""
+getValueForCurrentLabelFromValues values currentLabel = 
+  case filter (\(_, name) -> nameToString name == currentLabel) values of
+    [(value, _)] -> unvalue value ++ " "
+    _ -> ""
 
 findBlock :: [Ast.BasicBlock Range] -> String -> Ast.BasicBlock Range
 findBlock (a:x) name = if getLabel a == name then a else findBlock x name

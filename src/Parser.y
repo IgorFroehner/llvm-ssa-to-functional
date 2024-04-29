@@ -186,7 +186,7 @@ icmpCall :: { Icmp L.Range }
   : icmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
 
 cmpDef :: { Cmp L.Range }
-  : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range (normalizeName cmp)) }
+  : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range (normalizeOp cmp)) }
 
 brCall :: { Br L.Range }
   : br brArguments { Br (L.rtRange $1) $2 }

@@ -8,7 +8,21 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import Text.Printf
 
 translateICMP :: Ast.Icmp Range -> String
-translateICMP (Ast.Icmp _ _ _ a b) = printf "if %s == %s then 1 else 0" (unvalue a) (unvalue b)
+translateICMP (Ast.Icmp _ cmp _ a b) = printf "if %s %s %s then 1 else 0" (unvalue a) (acmp cmp) (unvalue b)
+
+acmp :: Ast.Cmp Range -> String
+acmp (Ast.Cmp _ cmp) = case cmp of
+  "eq" -> "=="
+  "ne" -> "/="
+  "ugt" -> ">"
+  "uge" -> ">="
+  "ult" -> "<"
+  "ule" -> "<="
+  "sgt" -> ">"
+  "sge" -> ">="
+  "slt" -> "<"
+  "sle" -> "<="
+  _ -> "UNKNOWN CMP"
 
 translateBinOp :: Ast.BinOpCall Range -> String
 translateBinOp (Ast.BinOpCall _ binop _ a b) = unvalue a ++ abinop binop ++ unvalue b
@@ -26,6 +40,8 @@ abinop (Ast.BinOp _ op) = case op of
   "sdiv" -> " `div` "
   "urem" -> " `mod` "
   "srem" -> " `mod` "
+  "and" -> " .&. "
+  "or" -> " .|. "
   _ -> op
 
 unpack :: LBS.ByteString -> String

@@ -56,6 +56,8 @@ tokens :-
 <0> sdiv          { tokBinOp }
 <0> urem          { tokBinOp }
 <0> srem          { tokBinOp }
+<0> and           { tokBinOp }
+<0> or            { tokBinOp }
 
 -- Conversion operations
 <0> trunc         { tokConvOp }
@@ -93,6 +95,8 @@ tokens :-
 
 -- Ignore for now
 <0> "#"$digit+         ;
+<0> "!"$alpha+         ;
+<0> "!"$digit+         ;
 <0> attributes .*      ;
 <0> private            ;
 <0> align              ;
@@ -105,6 +109,8 @@ tokens :-
 <0> local_unnamed_addr ;
 <0> int                ;
 <0> returned           ;
+<0> zeroext            ;
+<0> metadata           ;
 
 {
 data AlexUserState = AlexUserState

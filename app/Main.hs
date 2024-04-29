@@ -9,8 +9,6 @@ import Translate (translate)
 import qualified Data.ByteString.Lazy as BL
 import System.Environment (getArgs)
 
-import Data.Graph.Inductive.Graph (Node, lab, suc)
-import Data.Graph.Inductive.PatriciaTree
 import Dominance (buildGraph, dominance)
 
 main :: IO ()
@@ -46,7 +44,6 @@ main = do
                         _ -> putStrLn (beautyPrint ast)
         (file:out) -> do
             s <- BL.readFile file
-            -- print $ runAlex s parseLLVMIR
             case runAlex s parseLLVMIR of
                 Left err -> putStrLn err
                 Right ast -> do
