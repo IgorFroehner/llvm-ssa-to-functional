@@ -31,7 +31,6 @@ library
       GraphViz
       Lexer
       Lib
-      NameGenerator
       NameNormalizer
       Parser
       Translate

@@ -42,6 +42,9 @@ abinop (Ast.BinOp _ op) = case op of
   "srem" -> " `mod` "
   "and" -> " .&. "
   "or" -> " .|. "
+  "xor" -> " `xor` "
+  "shl" -> " `shiftL` "
+  "lshr" -> " `shiftR` "
   _ -> op
 
 unpack :: LBS.ByteString -> String

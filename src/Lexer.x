@@ -56,8 +56,12 @@ tokens :-
 <0> sdiv          { tokBinOp }
 <0> urem          { tokBinOp }
 <0> srem          { tokBinOp }
+-- Bitwise
 <0> and           { tokBinOp }
 <0> or            { tokBinOp }
+<0> shl           { tokBinOp }
+<0> lshr          { tokBinOp }
+<0> xor           { tokBinOp }
 
 -- Conversion operations
 <0> trunc         { tokConvOp }
@@ -86,10 +90,11 @@ tokens :-
 <0> (void | label | i$digit+ | half | float | double | fp128 | ptr) { tokType }
 
 -- Constants
-<0> \-?$digit+ { tokInteger }
-<0> \"[^\"]*\" { tokString }
+<0> \-?$digit+   { tokInteger }
+<0> \"[^\"]*\"   { tokString }
+<0> false | true { tokInteger }
 
--- Comparison kinds
+-- Types of comparison
 
 <0> (eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle) { tokCmp }
 
@@ -205,13 +210,19 @@ tokLocalId inp@(_, _, str, _) len =
     , rtRange = mkRange inp len
     }
 
-
 tokInteger :: AlexAction RangedToken
 tokInteger inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = Integer $ read $ BS.unpack $ BS.take len str
-    , rtRange = mkRange inp len
-    }
+  let
+    string = BS.unpack $ BS.take len str
+    value = case string of
+      "true" -> 1
+      "false" -> 0
+      _ -> read string
+  in
+    pure RangedToken
+      { rtToken = Integer $ value
+      , rtRange = mkRange inp len
+      }
 
 tokString :: AlexAction RangedToken
 tokString inp@(_, _, str, _) len =
