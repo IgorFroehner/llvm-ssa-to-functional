@@ -4,8 +4,10 @@ module Dominance (buildGraph, dominance) where
 import qualified Ast
 import Lexer
 
-import Data.Graph.Inductive.PatriciaTree
 import TranslateAux (uname)
+import AstHelpers (getLabel)
+
+import Data.Graph.Inductive.PatriciaTree
 import Data.List (find)
 import Data.Graph.Inductive.Query.Dominators (iDom)
 import Data.Graph.Inductive.Graph (mkGraph, labNodes)
@@ -57,15 +59,9 @@ getBranch (Ast.FlowBranch (Ast.Br _ [goto])) = [uname goto]
 getBranch (Ast.FlowBranch (Ast.Br _ (_:goto1:goto2:_))) = [uname goto1, uname goto2]
 getBranch _ = []
 
-getNodes :: Ast.Function a -> [(Int, String)]
+getNodes :: Ast.Function Range -> [(Int, String)]
 getNodes (Ast.FunctionDef _ _ _ _ blocks) = zip [0..] (getLabelBlocks blocks)
 getNodes _ = undefined
 
-getLabelBlocks :: [Ast.BasicBlock a] -> [String]
+getLabelBlocks :: [Ast.BasicBlock Range] -> [String]
 getLabelBlocks = foldr (\ b -> (++) [getLabel b]) []
-
--- Helper Functions
-
-getLabel :: Ast.BasicBlock a -> String
-getLabel (Ast.BasicBlock _ (Ast.LName _ name) _ _ _) = name
-getLabel _ = undefined

@@ -2,11 +2,12 @@
 module Translate (translate) where
 
 import Lexer
+import TranslateAux
+import AstHelpers
 
 import qualified Ast
-import TranslateAux
-import Text.Printf
 
+import Text.Printf
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph (lab, suc, Node)
 import Data.Maybe (fromJust)
@@ -30,11 +31,17 @@ printTree gr blocks node = dfs 2 node ++ [callInitialBlock] where
       sufix = blockSufix depth blocks block
     in nodeString : childLines ++ [sufix]
   initialBlock = findBlock blocks (fromJust (lab gr node))
-  callInitialBlock = ident 2 ++ "in " ++ getLabel initialBlock ++ "\n"
+  callInitialBlock = ident 2 "in " ++ getLabel initialBlock ++ "\n"
+
+header :: String
+header = "import Data.Bits\n\n"
 
 translate :: [Ast.Function Range] -> Gr String () -> String
-translate (f:fs) dom = translateFunction f dom ++ translate fs dom
-translate [] _ = ""
+translate fs dom = header ++ goOverFunctions fs dom
+
+goOverFunctions :: [Ast.Function Range] -> Gr String () -> String
+goOverFunctions (f:fs) dom = translateFunction f dom ++ goOverFunctions fs dom
+goOverFunctions [] _ = ""
 
 translateFunction :: Ast.Function Range -> Gr String () -> String
 translateFunction (Ast.FunctionDef _ _ name args blocks) dom = functionString (nameToString name) (placeFunctionArgs args) (concat (printTree dom blocks 0))
@@ -79,7 +86,7 @@ translateCallDec :: Ast.Call Range -> String
 translateCallDec (Ast.Call _ _ name args) = nameToString name ++ " " ++ translateArgs args
 
 translateCall :: Int -> Ast.Call Range -> String
-translateCall level (Ast.Call _ _ name args) = ident level ++ "-- " ++ nameToString name ++ " " ++ translateArgs args ++ "\n"
+translateCall level (Ast.Call _ _ name args) = ident level "-- " ++ nameToString name ++ " " ++ translateArgs args ++ "\n"
 
 translateArgs :: [Ast.CallArgument Range] -> String
 translateArgs ((Ast.CallArgument _ _ value):x) = unvalue value ++ " " ++ translateArgs x
@@ -90,26 +97,8 @@ translateFlow level blocks (Ast.FlowBranch br) currentLabel = translateBranch le
 translateFlow level _ (Ast.FlowReturn ret) _ = translateReturn (level + 1) ret
 
 translateReturn :: Int -> Ast.Return Range -> String
-translateReturn level (Ast.Return _ _ (Just value)) = ident level ++ returnString (unvalue value)
-translateReturn level (Ast.Return _ _ Nothing) = ident level ++ returnString "Nothing"
-
-functionString :: String -> String -> String -> String
-functionString = printf "import Data.Bits\n\n%s %s=\n  let\n%s"
-
-blockString :: Int -> String -> String -> String -> String -- -> String -> String -> String
-blockString level = printf (identEach level ["%s %s=\n", "  let\n%s"])
-
-decString :: Int -> String -> String -> String
-decString level = printf (ident level ++ "%s = %s\n")
-
-returnString :: String -> String
-returnString = printf "in %s\n"
-
-brIfString :: Int -> String -> String -> String -> String -> String -> String
-brIfString l = printf (identEach l ["in if %s == 1\n", "  then %s %s\n", "  else %s %s\n"])
-
-gotoString :: Int -> String -> String -> String
-gotoString l = printf (ident l ++ "in %s %s\n")
+translateReturn level (Ast.Return _ _ (Just value)) = ident level $ returnString (unvalue value)
+translateReturn level (Ast.Return _ _ Nothing) = ident level $ returnString "Nothing"
 
 translateBranch :: Int -> [Ast.BasicBlock Range] -> String -> Ast.Br Range -> String
 translateBranch l blocks currentLabel (Ast.Br _ [name]) = gotoString (l + 1) toLabel callArgs
@@ -144,18 +133,26 @@ findBlock :: [Ast.BasicBlock Range] -> String -> Ast.BasicBlock Range
 findBlock (a:x) name = if getLabel a == name then a else findBlock x name
 findBlock [] name = error (printf "Block %s not found" name)
 
-getLabel :: Ast.BasicBlock Range -> String
-getLabel (Ast.BasicBlock _ label _ _ _) = nameToString label
-
-getFlow :: Ast.BasicBlock Range -> Ast.Flow Range
-getFlow (Ast.BasicBlock _ _ _ _ flow) = fromJust flow
-
-nameToString :: Ast.Name Range -> String
-nameToString (Ast.GName _ name) = name
-nameToString (Ast.LName _ name) = name
-
-ident :: Int -> String
-ident level = replicate (level * 2) ' '
+ident :: Int -> String -> String
+ident level str = replicate (level * 2) ' ' ++ str
 
 identEach :: Int -> [String] -> String
-identEach level = concatMap (ident level ++)
+identEach level = concatMap (ident level)
+
+functionString :: String -> String -> String -> String
+functionString = printf "%s %s=\n  let\n%s"
+
+blockString :: Int -> String -> String -> String -> String -- -> String -> String -> String
+blockString level = printf (identEach level ["%s %s=\n", "  let\n%s"])
+
+decString :: Int -> String -> String -> String
+decString level = printf (ident level "%s = %s\n")
+
+returnString :: String -> String
+returnString = printf "in %s\n"
+
+brIfString :: Int -> String -> String -> String -> String -> String -> String
+brIfString l = printf (identEach l ["in if %s == 1\n", "  then %s %s\n", "  else %s %s\n"])
+
+gotoString :: Int -> String -> String -> String
+gotoString l = printf (ident l "in %s %s\n")

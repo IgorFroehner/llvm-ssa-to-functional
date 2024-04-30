@@ -1,11 +1,15 @@
 
-module TranslateAux (translateICMP, translateBinOp, translateSelect, unpack, unvalue, uname) where
+module TranslateAux (translateICMP, translateBinOp, translateSelect, unpack, unvalue, uname, nameToString) where
 
 import qualified Ast
 import Lexer
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Text.Printf
+
+nameToString :: Ast.Name Range -> String
+nameToString (Ast.GName _ name) = name
+nameToString (Ast.LName _ name) = name
 
 translateICMP :: Ast.Icmp Range -> String
 translateICMP (Ast.Icmp _ cmp _ a b) = printf "if %s %s %s then 1 else 0" (unvalue a) (acmp cmp) (unvalue b)

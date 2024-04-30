@@ -136,7 +136,7 @@ lname :: { Name L.Range }
 
 -- Global names are prefixed with a '@'.
 gname :: { Name L.Range }
-  : gidentifier                      { unTok $1 (\range (L.GIdentifier name) -> GName range (normalizeName name)) }
+  : gidentifier                      { unTok $1 (\range (L.GIdentifier name) -> GName range (normalizeOp name)) }
 
 integerValue :: { IntegerValue L.Range }
   : integer                          { unTok $1 (\range (L.Integer value) -> IntegerValue range value) }
