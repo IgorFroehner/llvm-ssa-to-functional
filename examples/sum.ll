@@ -1,4 +1,4 @@
-define dso_local noundef i32 @sum(i32 noundef %0) local_unnamed_addr #0 {
+define dso_local noundef i32 @asum(i32 noundef %0) local_unnamed_addr #0 {
 entry:
   %2 = icmp slt i32 %0, 1
   br i1 %2, label %14, label %3

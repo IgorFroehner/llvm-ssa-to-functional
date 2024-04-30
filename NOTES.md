@@ -4,6 +4,35 @@ Some details on the implementation
 * implicit name of the first block
 * when the call that makes the value selection is to the imediate dominator and not to the block itself
 
+```
+
+program := program function
+         | function
+
+function := <name> <args> = <lets>
+
+args := <name> <args>
+      | <name>
+
+lets := let <name> args in let <decls> <lets> in <flow>
+
+<decls> := <decl> <decls>
+         | <decl>
+
+<decl> := name = <binop>
+
+<flow> := in <call>
+        | in if <cond> then <call> else <call>
+
+<call> := <name> <values>
+
+<values> := <value> <values>
+          | <value>
+
+<value> := <const> | <name>
+
+```
+
 # Translation
 
 In the LLVM IR we have the following structure:
@@ -27,7 +56,7 @@ Function (name, args, blocks):
 Block (label, phis, stmts, flow):
     "let" \
     "  #{label} #{argsFromPhis phis} = " \
-    "    let" \
+    "    let" \ 
     "      #{translateStmts stmts}" \
     "      #{inlineCalledBlocks self flow}" \
     "    in #{translateFlows flow}" \
