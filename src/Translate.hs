@@ -2,150 +2,137 @@
 module Translate (translate) where
 
 import Lexer
-import TranslateAux
-import AstHelpers
 
 import qualified Ast
+import qualified Anf
 
-import Text.Printf
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph (lab, suc, Node)
 import Data.Maybe (fromJust)
 
--- Depth-first traversal
-treeTraversal :: Gr String () -> [Ast.BasicBlock Range] -> Node -> [String]
-treeTraversal gr blocks node = dfs 2 node ++ [callInitialBlock] where
-  dfs depth n =
+import TranslateAux
+import AstHelpers
+
+translate :: [Ast.Function Range] -> Gr String () -> Anf.Program
+translate fs gr = Anf.Program (map (buildAnfFromFunction gr) fs)
+
+buildAnfFromFunction :: Gr String () -> Ast.Function Range -> Anf.Function
+buildAnfFromFunction dom (Ast.FunctionDef _ _ name args blocks) = Anf.Function (nameToString name) (anfArgs args) (anfFromTree dom blocks 0)
+buildAnfFromFunction _ _ = undefined
+
+anfFromTree :: Gr String () -> [Ast.BasicBlock Range] -> Node -> Anf.Let
+anfFromTree gr blocks = dfs where
+  dfs n =
     let
       label = fromJust (lab gr n)
       block = findBlock blocks label
-      nodeString = translateBlock depth block
       children = suc gr n
-      childLines = concatMap (dfs (depth + 1)) children
-      sufix = blockSufix depth blocks block
-    in nodeString : childLines ++ [sufix]
-  initialBlock = findBlock blocks (fromJust (lab gr node))
-  callInitialBlock = ident 2 "in " ++ getLabel initialBlock ++ "\n"
+      childLets = map dfs children
+      nodeLet = translateBlock blocks block childLets
+    in nodeLet
 
-translate :: [Ast.Function Range] -> Gr String () -> String
-translate fs dom = header ++ goOverFunctions fs dom
+anfArgs :: [Ast.ArgumentDef Range] -> [Anf.ArgumentDef]
+anfArgs = map anfArg
 
-goOverFunctions :: [Ast.Function Range] -> Gr String () -> String
-goOverFunctions (f:fs) dom = translateFunction f dom ++ goOverFunctions fs dom
-goOverFunctions [] _ = ""
+anfArg :: Ast.ArgumentDef Range -> Anf.ArgumentDef
+anfArg (Ast.ArgumentDef _ _ (Just name)) = Anf.ArgumentDef (nameToString name)
+anfArg (Ast.ArgumentDef _ _ Nothing) = Anf.ArgumentDef "noname"
 
-header :: String
-header = "import Data.Bits\n\n"
-
-blockSufix :: Int -> [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> String
-blockSufix level blocks block = translateFlow level blocks (getFlow block) (getLabel block)
-
-translateFunction :: Ast.Function Range -> Gr String () -> String
-translateFunction (Ast.FunctionDef _ _ name args blocks) dom = functionString (nameToString name) (placeFunctionArgs args) (concat (treeTraversal dom blocks 0))
-translateFunction _ _ = ""
-
-placeFunctionArgs :: [Ast.ArgumentDef Range] -> String
-placeFunctionArgs (a:x) = placeFunctionArg a ++ " " ++ placeFunctionArgs x
-placeFunctionArgs [] = ""
-
-placeFunctionArg :: Ast.ArgumentDef Range -> String
-placeFunctionArg (Ast.ArgumentDef _ _ (Just name)) = nameToString name
-placeFunctionArg (Ast.ArgumentDef _ _ Nothing) = "-"
-
-translateBlock :: Int -> Ast.BasicBlock Range -> String
-translateBlock level (Ast.BasicBlock _ label phis stmts _) = blockString level (nameToString label) (getArgsFromPhis phis) (translateStmts (level + 1) stmts)
-
-getArgsFromPhis :: [Ast.PhiDec Range] -> String
-getArgsFromPhis (phi:x) = getArgFromPhi phi ++ " " ++ getArgsFromPhis x
-getArgsFromPhis [] = ""
-
-getArgFromPhi :: Ast.PhiDec Range -> String
-getArgFromPhi (Ast.PhiDec _ name _) = nameToString name
-
-translateStmts :: Int -> [Ast.Stmt Range] -> String
-translateStmts level = concatMap (translateStmt level)
-
-translateStmt :: Int -> Ast.Stmt Range -> String
-translateStmt level (Ast.SDec stmt) = translateDec level stmt
-translateStmt level (Ast.SCall stmt) = translateCall level stmt
-
-translateDec :: Int -> Ast.Dec Range -> String
-translateDec level (Ast.DecCall _ name call) = decString level (nameToString name) (translateCallDec call)
-translateDec level (Ast.DecIcmp _ name icmp) = decString level (nameToString name) (translateICMP icmp)
-translateDec level (Ast.DecBinOp _ name binop) = decString level (nameToString name) (translateBinOp binop)
-translateDec level (Ast.DecConvOp _ name convop) = decString level (nameToString name) (translateConvOp convop)
-translateDec level (Ast.DecSelect _ name select) = decString level (nameToString name) (translateSelect select)
-
-translateConvOp :: Ast.ConvOpCall Range -> String
-translateConvOp (Ast.ConvOpCall _ _ _ value _) = unvalue value
-
-translateCallDec :: Ast.Call Range -> String
-translateCallDec (Ast.Call _ _ name args) = nameToString name ++ " " ++ translateArgs args
-
-translateCall :: Int -> Ast.Call Range -> String
-translateCall level (Ast.Call _ _ name args) = ident level "-- " ++ nameToString name ++ " " ++ translateArgs args ++ "\n"
-
-translateArgs :: [Ast.CallArgument Range] -> String
-translateArgs ((Ast.CallArgument _ _ value):x) = unvalue value ++ " " ++ translateArgs x
-translateArgs [] = ""
-
-translateFlow :: Int -> [Ast.BasicBlock Range] -> Ast.Flow Range -> String -> String
-translateFlow level blocks (Ast.FlowBranch br) currentLabel = translateBranch level blocks currentLabel br
-translateFlow level _ (Ast.FlowReturn ret) _ = translateReturn (level + 1) ret
-
-translateReturn :: Int -> Ast.Return Range -> String
-translateReturn level (Ast.Return _ _ (Just value)) = ident level $ returnString (unvalue value)
-translateReturn level (Ast.Return _ _ Nothing) = ident level $ returnString "Nothing"
-
-translateBranch :: Int -> [Ast.BasicBlock Range] -> String -> Ast.Br Range -> String
-translateBranch l blocks currentLabel (Ast.Br _ [name]) = gotoString (l + 1) toLabel callArgs
+translateBlock :: [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> [Anf.Let] -> Anf.Let
+translateBlock blocks (Ast.BasicBlock _ label phis stmts flow) children = Anf.Let name args blockStmts children blockFlow
   where
-    toLabel = nameToString name
-    toBlock = findBlock blocks toLabel
-    callArgs = callArgumentsFromPhis toBlock currentLabel
-translateBranch l blocks currentLabel (Ast.Br _ (condValue:name1:name2:_)) = brIfString (l + 1) cond toLabel1 callArgs1 toLabel2 callArgs2
+    name = nameToString label
+    args = argsFromPhis phis
+    blockStmts = anfStmts stmts
+    blockFlow = flowFromBlock blocks name (fromJust flow)
+
+argsFromPhis :: [Ast.PhiDec Range] -> [Anf.ArgumentDef]
+argsFromPhis = map argFromPhi
+
+argFromPhi :: Ast.PhiDec Range -> Anf.ArgumentDef
+argFromPhi (Ast.PhiDec _ name _) = Anf.ArgumentDef (nameToString name)
+
+flowFromBlock :: [Ast.BasicBlock Range] -> String -> Ast.Flow Range -> Anf.Flow
+flowFromBlock _ _ (Ast.FlowReturn ret) = Anf.FlowCall (anfReturn ret)
+flowFromBlock blocks currentLabel (Ast.FlowBranch branch) = anfBranch blocks currentLabel branch
+
+anfBranch :: [Ast.BasicBlock Range] -> String -> Ast.Br Range -> Anf.Flow
+anfBranch blocks currentLabel (Ast.Br _ [goto1]) = Anf.FlowCall call
   where
-    cond = nameToString condValue
-    toLabel1 = nameToString name1
-    fromBlock1 = findBlock blocks toLabel1
-    toLabel2 = nameToString name2
-    fromBlock2 = findBlock blocks toLabel2
-    callArgs1 = callArgumentsFromPhis fromBlock1 currentLabel
-    callArgs2 = callArgumentsFromPhis fromBlock2 currentLabel
-translateBranch _ _ _ _ = "Unkown branch type"
+    gotoLabel = nameToString goto1
+    block = findBlock blocks gotoLabel
+    callArgs = callArgsFromBlockPhis block currentLabel
+    call = Anf.Call (Anf.Name gotoLabel) callArgs
+anfBranch blocks currentLabel (Ast.Br _ (cond:goto1:goto2:_)) = Anf.FlowCond $ Anf.IfThenElse condConst callIf callElse
+  where
+    condConst = constFromName cond
 
-callArgumentsFromPhis :: Ast.BasicBlock Range -> String -> String
-callArgumentsFromPhis (Ast.BasicBlock _ _ phis _ _) currentLabel = concatMap (getValueForCurrentLabel currentLabel) phis
+    gotoLabelIf = nameToString goto1
+    blockIf = findBlock blocks gotoLabelIf
+    callArgsIf = callArgsFromBlockPhis blockIf currentLabel
+    callIf = Anf.Call (Anf.Name gotoLabelIf) callArgsIf
 
-getValueForCurrentLabel :: String -> Ast.PhiDec Range -> String
-getValueForCurrentLabel currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabelFromValues values currentLabel
+    gotoLabelElse = nameToString goto2
+    blockElse = findBlock blocks gotoLabelElse
+    callArgsElse = callArgsFromBlockPhis blockElse currentLabel
+    callElse = Anf.Call (Anf.Name gotoLabelElse) callArgsElse
+anfBranch _ _ _ = undefined
 
-getValueForCurrentLabelFromValues :: [(Ast.Value Range, Ast.Name Range)] -> String -> String
+constFromName :: Ast.Name Range -> Anf.Value
+constFromName = Anf.Name . nameToString
+
+callArgsFromBlockPhis :: Ast.BasicBlock Range -> String -> [Anf.Value]
+callArgsFromBlockPhis (Ast.BasicBlock _ _ phis _ _) label = map (callArgFromPhi label) phis
+
+callArgFromPhi :: String -> Ast.PhiDec Range -> Anf.Value
+callArgFromPhi currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabelFromValues values currentLabel
+
+getValueForCurrentLabelFromValues :: [(Ast.Value Range, Ast.Name Range)] -> String -> Anf.Value
 getValueForCurrentLabelFromValues values currentLabel =
   case filter (\(_, name) -> nameToString name == currentLabel) values of
-    [(value, _)] -> unvalue value ++ " "
-    _ -> ""
+    [(Ast.ValueInt (Ast.IntegerValue _ value), _)] -> Anf.Const value
+    [(Ast.ValueName name, _)] -> Anf.Name (nameToString name)
+    _ -> error $ "Phi value not found for label " ++ currentLabel
 
-ident :: Int -> String -> String
-ident level str = replicate (level * 2) ' ' ++ str
+anfReturn :: Ast.Return Range -> Anf.Call
+anfReturn (Ast.Return _ _ (Just valueReturned)) = Anf.Call (anfValue valueReturned) []
+anfReturn (Ast.Return _ _ Nothing) = Anf.Call (Anf.Const 0) []
 
-identEach :: Int -> [String] -> String
-identEach level = concatMap (ident level)
+anfStmts :: [Ast.Stmt Range] -> [Anf.Expr]
+anfStmts = map anfExpr
 
-functionString :: String -> String -> String -> String
-functionString = printf "%s %s=\n  let\n%s"
+anfExpr :: Ast.Stmt Range -> Anf.Expr
+anfExpr (Ast.SDec stmt) = Anf.ExpDecl (anfDec stmt)
+anfExpr (Ast.SCall stmt) = Anf.ExpCall (anfCall stmt)
 
-blockString :: Int -> String -> String -> String -> String -- -> String -> String -> String
-blockString level = printf (identEach level ["%s %s=\n", "  let\n%s"])
+anfDec :: Ast.Dec Range -> Anf.Decl
+anfDec (Ast.DecCall _ name call) = Anf.DeclCall (nameToString name) (anfCall call)
+anfDec (Ast.DecBinOp _ name binop) = Anf.DeclBinOp (nameToString name) (anfBinOp binop)
+anfDec (Ast.DecConvOp _ name convop) = Anf.DeclConvOp (nameToString name) (anfConvOp convop)
+anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (anfIcmp icmp)
+anfDec (Ast.DecSelect _ name select) = Anf.DeclSelect (nameToString name) (anfSelect select)
 
-decString :: Int -> String -> String -> String
-decString level = printf (ident level "%s = %s\n")
+anfConvOp :: Ast.ConvOpCall Range -> Anf.ConvOp
+anfConvOp (Ast.ConvOpCall _ _ _ value _) = Anf.ConvOp (anfValue value)
 
-returnString :: String -> String
-returnString = printf "in %s\n"
+anfSelect :: Ast.Select Range -> Anf.Select
+anfSelect (Ast.Select _ _ condValue value1 value2) = Anf.Select (anfValue condValue) (anfValue value1) (anfValue value2)
 
-brIfString :: Int -> String -> String -> String -> String -> String -> String
-brIfString l = printf (identEach l ["in if %s == 1\n", "  then %s %s\n", "  else %s %s\n"])
+anfIcmp :: Ast.Icmp Range -> Anf.Icmp
+anfIcmp (Ast.Icmp _ (Ast.Cmp _ cmp) _ value1 value2) = Anf.Icmp cmp (anfValue value1) (anfValue value2)
 
-gotoString :: Int -> String -> String -> String
-gotoString l = printf (ident l "in %s %s\n")
+anfCall :: Ast.Call Range -> Anf.Call
+anfCall (Ast.Call _ _ name args) = Anf.Call (Anf.Name (nameToString name)) (anfCallArgs args)
+
+anfBinOp :: Ast.BinOpCall Range -> Anf.BinOp
+anfBinOp (Ast.BinOpCall _ (Ast.BinOp _ binop) _ value1 value2) = Anf.BinOp binop (anfValue value1) (anfValue value2)
+
+anfCallArgs :: [Ast.CallArgument Range] -> [Anf.Value]
+anfCallArgs = map anfCallArg
+
+anfCallArg :: Ast.CallArgument Range -> Anf.Value
+anfCallArg (Ast.CallArgument _ _ value) = anfValue value
+
+anfValue :: Ast.Value Range -> Anf.Value
+anfValue (Ast.ValueInt (Ast.IntegerValue _ int)) = Anf.Const int
+anfValue (Ast.ValueName name) = Anf.Name (nameToString name)

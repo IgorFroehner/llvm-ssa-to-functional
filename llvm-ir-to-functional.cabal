@@ -35,7 +35,6 @@ library
       NameNormalizer
       Parser
       PrintAnf
-      ToAnf
       Translate
       TranslateAux
   other-modules:
