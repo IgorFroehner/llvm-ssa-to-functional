@@ -1,31 +1,6 @@
 
 module Anf where
 
--- program := program function
---          | function
-
--- function := <name> <args> = <lets>
-
--- args := <name> <args>
---       | <name>
-
--- lets := let <name> args in let <decls> <lets> in <flow>
-
--- <decls> := <decl> <decls>
---          | <decl>
-
--- <decl> := name = <binop>
-
--- <flow> := in <call>
---         | in if <cond> then <call> else <call>
-
--- <call> := <name> <values>
-
--- <values> := <value> <values>
---           | <value>
-
--- <value> := <const> | <name>
-
 newtype Program = Program [Function] deriving Show
 
 data Function =

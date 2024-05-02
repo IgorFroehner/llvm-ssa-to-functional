@@ -5,7 +5,6 @@ Some details on the implementation
 * when the call that makes the value selection is to the imediate dominator and not to the block itself
 
 ```
-
 program := program function
          | function
 
@@ -30,7 +29,6 @@ lets := let <name> args in let <decls> <lets> in <flow>
           | <value>
 
 <value> := <const> | <name>
-
 ```
 
 # Translation

@@ -8,7 +8,6 @@ import Control.Monad (forM_)
 import Lexer
 import Parser
 
--- Helper function that tests all files in the given directory
 testAllFilesInDirectory :: FilePath -> IO ()
 testAllFilesInDirectory dir = do
   files <- listDirectory dir

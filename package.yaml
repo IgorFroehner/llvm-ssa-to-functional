@@ -77,3 +77,4 @@ tests:
     - filepath
     - bytestring
     - llvm-ir-to-functional
+    - fgl

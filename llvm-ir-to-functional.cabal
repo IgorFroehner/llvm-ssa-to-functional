@@ -92,6 +92,7 @@ test-suite llvm-ir-to-functional-test
     , base >=4.7 && <5
     , bytestring
     , directory
+    , fgl
     , filepath
     , hspec
     , llvm-ir-to-functional
