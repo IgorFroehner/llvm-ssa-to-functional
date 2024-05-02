@@ -22,20 +22,16 @@ dominance g = let
 buildDomGraph :: [(Int, Int)] -> [(Int, String)] -> Gr String ()
 buildDomGraph dom nodes = mkGraph nodes (map (\(a, b) -> (a, b, ())) dom)
 
--- Build the control graph out of the basic blocks of a function
-
 buildGraph :: Ast.Function Range -> Gr String ()
 buildGraph f = mkGraph nodes edges
   where
     nodes = getNodes f
     edges = getEdges f nodes
 
--- Function to extract edges from basic blocks of a function
 getEdges :: Ast.Function Range -> [(Int, String)] -> [(Int, Int, ())]
 getEdges (Ast.FunctionDef _ _ _ _ blocks) nodes = concatMap (getBlockEdges nodes) blocks
 getEdges _ _ = []
 
--- Function to get edges from a basic block
 getBlockEdges :: [(Int, String)] -> Ast.BasicBlock Range -> [(Int, Int, ())]
 getBlockEdges nodes block =
   let nodeId = findNodeId nodes (getLabel block)
@@ -43,7 +39,6 @@ getBlockEdges nodes block =
       successorIds = map (findNodeId nodes) successors
   in map (\s -> (nodeId, s, ())) successorIds
 
--- Function to find the node ID of a basic block
 findNodeId :: [(Int, String)] -> String -> Int
 findNodeId nodes name =
   case find (\(_, nodeName) -> name == nodeName) nodes of

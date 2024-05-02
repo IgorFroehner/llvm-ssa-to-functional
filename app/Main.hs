@@ -48,4 +48,4 @@ main = do
                     case out of
                         ("-o":outFile:_) -> writeFile outFile output
                         _ -> putStrLn output
-        [] -> putStrLn "Usage: stack run -- [--dominance-viz | --graph-viz | --beauty] <file.ll> [-o <output-file>]"
+        [] -> putStrLn "Usage: stack run -- [--dominance-viz | --graph-viz] <file.ll> [-o <output-file>]"
