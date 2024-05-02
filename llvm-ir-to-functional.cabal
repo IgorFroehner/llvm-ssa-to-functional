@@ -31,7 +31,6 @@ library
       Dominance
       GraphViz
       Lexer
-      Lib
       NameNormalizer
       Parser
       PrintAnf
