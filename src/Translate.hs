@@ -12,29 +12,20 @@ import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph (lab, suc, Node)
 import Data.Maybe (fromJust)
 
-stringfyNode :: Int -> Ast.BasicBlock Range -> String
-stringfyNode = translateBlock
-
-blockSufix :: Int -> [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> String
-blockSufix level blocks block = translateFlow level blocks (getFlow block) (getLabel block)
-
 -- Depth-first traversal
-printTree :: Gr String () -> [Ast.BasicBlock Range] -> Node -> [String]
-printTree gr blocks node = dfs 2 node ++ [callInitialBlock] where
+treeTraversal :: Gr String () -> [Ast.BasicBlock Range] -> Node -> [String]
+treeTraversal gr blocks node = dfs 2 node ++ [callInitialBlock] where
   dfs depth n =
     let
       label = fromJust (lab gr n)
       block = findBlock blocks label
-      nodeString = stringfyNode depth block
+      nodeString = translateBlock depth block
       children = suc gr n
       childLines = concatMap (dfs (depth + 1)) children
       sufix = blockSufix depth blocks block
     in nodeString : childLines ++ [sufix]
   initialBlock = findBlock blocks (fromJust (lab gr node))
   callInitialBlock = ident 2 "in " ++ getLabel initialBlock ++ "\n"
-
-header :: String
-header = "import Data.Bits\n\n"
 
 translate :: [Ast.Function Range] -> Gr String () -> String
 translate fs dom = header ++ goOverFunctions fs dom
@@ -43,8 +34,14 @@ goOverFunctions :: [Ast.Function Range] -> Gr String () -> String
 goOverFunctions (f:fs) dom = translateFunction f dom ++ goOverFunctions fs dom
 goOverFunctions [] _ = ""
 
+header :: String
+header = "import Data.Bits\n\n"
+
+blockSufix :: Int -> [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> String
+blockSufix level blocks block = translateFlow level blocks (getFlow block) (getLabel block)
+
 translateFunction :: Ast.Function Range -> Gr String () -> String
-translateFunction (Ast.FunctionDef _ _ name args blocks) dom = functionString (nameToString name) (placeFunctionArgs args) (concat (printTree dom blocks 0))
+translateFunction (Ast.FunctionDef _ _ name args blocks) dom = functionString (nameToString name) (placeFunctionArgs args) (concat (treeTraversal dom blocks 0))
 translateFunction _ _ = ""
 
 placeFunctionArgs :: [Ast.ArgumentDef Range] -> String
@@ -124,14 +121,10 @@ getValueForCurrentLabel :: String -> Ast.PhiDec Range -> String
 getValueForCurrentLabel currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabelFromValues values currentLabel
 
 getValueForCurrentLabelFromValues :: [(Ast.Value Range, Ast.Name Range)] -> String -> String
-getValueForCurrentLabelFromValues values currentLabel = 
+getValueForCurrentLabelFromValues values currentLabel =
   case filter (\(_, name) -> nameToString name == currentLabel) values of
     [(value, _)] -> unvalue value ++ " "
     _ -> ""
-
-findBlock :: [Ast.BasicBlock Range] -> String -> Ast.BasicBlock Range
-findBlock (a:x) name = if getLabel a == name then a else findBlock x name
-findBlock [] name = error (printf "Block %s not found" name)
 
 ident :: Int -> String -> String
 ident level str = replicate (level * 2) ' ' ++ str

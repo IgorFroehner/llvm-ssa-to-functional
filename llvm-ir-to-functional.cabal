@@ -25,15 +25,17 @@ source-repository head
 
 library
   exposed-modules:
+      Anf
       Ast
       AstHelpers
-      BeatyPrint
       Dominance
       GraphViz
       Lexer
       Lib
       NameNormalizer
       Parser
+      PrintAnf
+      ToAnf
       Translate
       TranslateAux
   other-modules:
