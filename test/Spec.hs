@@ -5,11 +5,18 @@ import System.Directory (listDirectory)
 import System.FilePath ((</>))
 import Control.Monad (forM_)
 
+import Data.Graph.Inductive.PatriciaTree
+import Data.Graph.Inductive.Graph (mkGraph)
+
 import Lexer
 import Parser
+import qualified Ast
+import qualified Anf
 
-testAllFilesInDirectory :: FilePath -> IO ()
-testAllFilesInDirectory dir = do
+import Translate (translate)
+
+parsesAllExaples :: FilePath -> IO ()
+parsesAllExaples dir = do
   files <- listDirectory dir
   forM_ files $ \file -> do
     let fullPath = dir </> file
@@ -29,4 +36,4 @@ main = hspec $ do
 
   describe "Parser.parseLLVMIR" $ do
     it "parses all examples as expected" $ do
-      testAllFilesInDirectory "examples"
+      parsesAllExaples "examples"

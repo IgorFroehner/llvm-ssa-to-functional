@@ -60,4 +60,4 @@ data IfThenElse
 data Value
     = Const Integer
     | Name String
-    deriving (Show)
+    deriving Show
