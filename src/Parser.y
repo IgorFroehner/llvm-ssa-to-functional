@@ -94,23 +94,23 @@ blocks :: { [BasicBlock L.Range] }
   |                                  { [] }
 
 block :: { BasicBlock L.Range }
-  : blockLabel phiDecs stmts branch  { BasicBlock (info $1 <-> info (head $3)) $1 $2 $3 (Just $4) }
+  : blockLabel phiDecs stmts flow  { BasicBlock (info $1 <-> info (head $3)) $1 $2 $3 (Just $4) }
   | blockLabel phiDecs stmts         { BasicBlock (info $1 <-> info (head $2)) $1 [] $3 Nothing }
-  | blockLabel phiDecs branch        { BasicBlock (info $1 <-> info (head $2)) $1 $2 [] (Just $3) }
-  | blockLabel stmts branch          { BasicBlock (info $1 <-> info (head $2)) $1 [] $2 (Just $3) }
+  | blockLabel phiDecs flow        { BasicBlock (info $1 <-> info (head $2)) $1 $2 [] (Just $3) }
+  | blockLabel stmts flow          { BasicBlock (info $1 <-> info (head $2)) $1 [] $2 (Just $3) }
   | blockLabel phiDecs               { BasicBlock (info $1 <-> info (head $2)) $1 $2 [] Nothing }
-  | blockLabel branch                { BasicBlock (info $1 <-> info $1) $1 [] [] (Just $2) }
+  | blockLabel flow                { BasicBlock (info $1 <-> info $1) $1 [] [] (Just $2) }
   | blockLabel stmts                 { BasicBlock (info $1 <-> info (head $2)) $1 [] $2 Nothing }
 
 blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeName label)) }
 
 initialStatementsBlock :: { BasicBlock L.Range }
-  : stmts branch                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "a1") [] $1 (Just $2) }
-  | branch                           { BasicBlock (info $1) (LName (info $1) "a1") [] [] (Just $1) }
+  : stmts flow                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "a1") [] $1 (Just $2) }
+  | flow                           { BasicBlock (info $1) (LName (info $1) "a1") [] [] (Just $1) }
   | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "a1") [] $1 Nothing }
 
-branch :: { Flow L.Range }
+flow :: { Flow L.Range }
   : brCall                           { FlowBranch $1 }
   | ret                              { FlowReturn $1 }
 

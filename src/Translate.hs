@@ -17,7 +17,9 @@ translate :: [Ast.Function Range] -> Gr String () -> Anf.Program
 translate fs gr = Anf.Program (map (buildAnfFromFunction gr) fs)
 
 buildAnfFromFunction :: Gr String () -> Ast.Function Range -> Anf.Function
-buildAnfFromFunction dom (Ast.FunctionDef _ _ name args blocks) = Anf.Function (nameToString name) (anfArgs args) (anfFromTree dom blocks 0)
+buildAnfFromFunction dom (Ast.FunctionDef _ _ name args blocks) = Anf.Function (nameToString name) (anfArgs args) lets
+  where
+    lets = anfFromTree dom blocks 0
 buildAnfFromFunction _ _ = undefined
 
 anfFromTree :: Gr String () -> [Ast.BasicBlock Range] -> Node -> Anf.Let
@@ -85,10 +87,10 @@ callArgsFromBlockPhis :: Ast.BasicBlock Range -> String -> [Anf.Value]
 callArgsFromBlockPhis (Ast.BasicBlock _ _ phis _ _) label = map (callArgFromPhi label) phis
 
 callArgFromPhi :: String -> Ast.PhiDec Range -> Anf.Value
-callArgFromPhi currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabelFromValues values currentLabel
+callArgFromPhi currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabel values currentLabel
 
-getValueForCurrentLabelFromValues :: [(Ast.Value Range, Ast.Name Range)] -> String -> Anf.Value
-getValueForCurrentLabelFromValues values currentLabel =
+getValueForCurrentLabel :: [(Ast.Value Range, Ast.Name Range)] -> String -> Anf.Value
+getValueForCurrentLabel values currentLabel =
   case filter (\(_, name) -> nameToString name == currentLabel) values of
     [(Ast.ValueInt (Ast.IntegerValue _ value), _)] -> Anf.Const value
     [(Ast.ValueName name, _)] -> Anf.Name (nameToString name)
