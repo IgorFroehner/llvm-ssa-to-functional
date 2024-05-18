@@ -1,8 +1,82 @@
 
-Some details on the implementation
+# Translation
 
-* implicit name of the first block
-* when the call that makes the value selection is to the imediate dominator and not to the block itself
+## LLVM-IR Parsing
+
+This project is parsing a subset of the LLVM-IR language like the following:
+
+```
+p := definition <t> @<x>(<xs>) {b} p
+
+b := <x>: <phis> <ss> <flow>
+
+phis := <x> = phi <t> <phi_values>
+      | e
+
+phi_values := [<v>, <x>], <phi_values>
+            | [<v>, <x>]
+
+ss := s ss | e
+
+s := <x> = <o>
+   | <l>
+
+o := <bin_op> ....
+
+l := call <t> @<x>(<vs>)
+
+f := br <rs>
+   | ret <t> <value>
+
+rs := <t> <x>, <rs>
+   | <t> <x>
+
+xs := <x>, <xs> 
+    | <x>
+    | e
+
+vs := <v>, <vs>
+    | <v>
+    | e
+
+t := native llvm types
+v := x | c
+x := variable or label
+c := constant
+```
+
+```
+program := [<functions>]
+
+function := definition <type> <name> [<argument_definitions>] [basic_blocks]
+          | declare <type> <name> [<argument_definitions>]
+
+argument_definition := <type>
+                     | <type> <name>
+
+basic_block := <name> [<phi_decs>] [<stmt>] <flow>
+             | <name> [<phi_decs>] [<stmt>]
+
+stmt := <name> = <operation>
+      | <function_call>
+
+operation := ....
+
+function_call := <name> ( <call_args> )
+
+call_args := <type> <value> , <call_args>
+           | <type> <value>
+
+phi_decs := <name> = phi <type> [(<value>,<name>)]
+
+flow := br <type> <name>
+      | br [<name>]
+
+<value> := <name>
+         | <int_const>
+```
+
+## Generated ANF:
 
 ```
 program := program function
@@ -31,141 +105,7 @@ lets := let <name> args in let <decls> <lets> in <flow>
 <value> := <const> | <name>
 ```
 
-# Translation
+Some details on the implementation
 
-In the LLVM IR we have the following structure:
-
-```
-Function (name, arguments): [
-    Blocks (option label): [
-        Operations...
-    ]
-]
-```
-
-Then it translated to Haskell like in ANF:
-
-```ruby
-Function (name, args, blocks):
-    "#{name} #{args} = let in" \
-    "  #{translateBlocks blocks}" \
-    " in #{name}"
-
-Block (label, phis, stmts, flow):
-    "let" \
-    "  #{label} #{argsFromPhis phis} = " \
-    "    let" \ 
-    "      #{translateStmts stmts}" \
-    "      #{inlineCalledBlocks self flow}" \
-    "    in #{translateFlows flow}" \
-    "  in #{blockCall block}" \
-
-Flow:
-    {
-        Br (cond, dest1, dest2):
-            "if #{cond} == 1" \
-            "  then dest1" \
-            "  else dest2" \
-        Return (var):
-            "in #{var}"
-    }
-```
-
-## Examples
-
-### Select
-
-One of the most basic examples, receiving two arguments and using a select operation.
-
-```llvm
-define i64 @safe_div(i64 %n, i64 %d) {
-  %1 = icmp eq i64 %d, 0
-  %2 = udiv i64 %n, %d
-  %3 = select i1 %1, i64 -1, i64 %2
-  ret i64 %3
-}
-```
-
-```haskell
-safe_div an ad = let in
-  let 
-    f =
-      let
-        a1 = if ad == 0 then 1 else 0
-        a2 = an `div` ad
-        a3 = if a1 /= 0 then (-1) else a2
-      in a3
-    in f
-```
-
-### Safe Div with Flow
-
-This example already includes block definitions and useage of a branching with the `br` operator.
-
-```llvm
-define i64 @safe_div(i64 %n, i64 %d) {
-  %1 = icmp eq i64 %d, 0
-  br i1 %1, label %iszero, label %nonzero
-
-iszero:
-  ret i64 -1
-
-nonzero:
-  %2 = udiv i64 %n, %d
-  ret i64 %2
-}
-```
-
-```haskell
-safe_div an ad = let in
-  let 
-    f =
-      let
-        a1 = if ad == 0 then 1 else 0
-        fiszero = let
-                      in (-1)
-        fnonzero = let
-                a2 = an `div` ad
-              in a2
-      in if a1 == 1
-        then fiszero
-        else fnonzero
-    in f
-```
-
-### Square
-
-Two functions and it has a conversion operator.
-
-```llvm
-define i32 @square(i32 %x) {
-  %1 = mul i32 %x, %x
-  ret i32 %1
-}
-
-define i64 @no_overflow_square(i32 %x) {
-  %1 = sext i32 %x to i64
-  %2 = mul i64 %1, %1
-
-  ret i64 %2
-}
-```
-
-```haskell
-square ax = let in
-  let 
-    f =
-      let
-        a1 = ax * ax
-      in a1
-    in f
-
-no_overflow_square ax = let in
-  let 
-    f =
-      let
-        a1 = ax
-        a2 = a1 * a1
-      in a2
-    in f
-```
+* implicit name of the first block
+* when the call that makes the value selection is to the imediate dominator and not to the block itself
