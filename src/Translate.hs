@@ -49,7 +49,8 @@ translateBlock blocks (Ast.BasicBlock _ label phis stmts flow) children = Anf.Le
     blockFlow = flowFromBlock blocks name (fromJust flow)
 
 argsFromPhis :: [Ast.PhiDec Range] -> [Anf.ArgumentDef]
-argsFromPhis = map argFromPhi
+argsFromPhis [] = [Anf.ArgumentDef "()"]
+argsFromPhis phis = map argFromPhi phis
 
 argFromPhi :: Ast.PhiDec Range -> Anf.ArgumentDef
 argFromPhi (Ast.PhiDec _ name _) = Anf.ArgumentDef (nameToString name)
@@ -84,6 +85,7 @@ constFromName :: Ast.Name Range -> Anf.Value
 constFromName = Anf.Name . nameToString
 
 callArgsFromBlockPhis :: Ast.BasicBlock Range -> String -> [Anf.Value]
+callArgsFromBlockPhis (Ast.BasicBlock _ _ [] _ _) _ = [Anf.Unit]
 callArgsFromBlockPhis (Ast.BasicBlock _ _ phis _ _) label = map (callArgFromPhi label) phis
 
 callArgFromPhi :: String -> Ast.PhiDec Range -> Anf.Value

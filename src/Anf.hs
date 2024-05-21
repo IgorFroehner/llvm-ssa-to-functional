@@ -60,4 +60,7 @@ data IfThenElse
 data Value
     = Const Integer
     | Name String
+    | Unit
     deriving Show
+
+type Unit = ()

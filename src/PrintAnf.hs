@@ -16,11 +16,11 @@ printProgram :: Program -> String
 printProgram (Program functions) = header ++ intercalate "\n\n" (map printFunction functions)
 
 printFunction :: Function -> String
-printFunction (Function name args lets) = functionString name funcitonArgs (printLet lets 1) ++ sufix
+printFunction (Function name args lets) = functionString name funcitonArgs (printLet lets 2) ++ sufix
   where
     funcitonArgs = unrollArguments args
     firstBlockLabel = (\(Let letName _ _ _ _) -> letName) lets
-    sufix = "  in " ++ firstBlockLabel ++ "\n"
+    sufix = "  in " ++ firstBlockLabel ++ " ()\n"
 
 unrollArguments :: [ArgumentDef] -> String
 unrollArguments ((ArgumentDef name):x) = name ++ " " ++ unrollArguments x
@@ -30,8 +30,8 @@ printLet :: Let -> Int -> String
 printLet (Let name args exprs lets flow) l =
   let
       argsStr = unrollArguments args
-      exprsStr = concatMap (printExpr (l + 1)) exprs
-      letsStr = concatMap (`printLet` (l + 1)) lets
+      exprsStr = concatMap (printExpr (l + 2)) exprs
+      letsStr = concatMap (`printLet` (l + 2)) lets
       flowStr = printFlow flow (l + 1)
   in blockString l name argsStr exprsStr letsStr flowStr
 
@@ -42,6 +42,7 @@ printExpr l (ExpDecl decl) = indent l $ printDecl decl
 printCall :: Call -> String
 printCall (Call (Name fname) values) = fname ++ " " ++ unwords (map printValue values)
 printCall (Call (Const value) values) = show value ++ " " ++ unwords (map printValue values)
+printCall (Call Unit _) = undefined
 
 printDecl :: Decl -> String
 printDecl (DeclBinOp name binop) = declString name (printBinOp binop)
@@ -63,8 +64,9 @@ printBinOp :: BinOp -> String
 printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ printValue right
 
 printValue :: Value -> String
-printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c 
+printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c
 printValue (Name n) = n
+printValue Unit = "()"
 
 printFlow :: Flow -> Int -> String
 printFlow (FlowCall call) l = indent l "in " ++ printCall call ++ "\n"
