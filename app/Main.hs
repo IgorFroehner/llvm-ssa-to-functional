@@ -40,8 +40,6 @@ main = do
       case runAlex s parseLLVMIR of
         Left err -> putStrLn err
         Right ast -> do
-          let g = buildGraph (head ast)
-          let dom = dominance g
-          let anf = translate ast dom
+          let anf = translate ast
           output out (printProgram anf)
     [] -> putStrLn "Usage: stack run -- [--dominance-viz | --graph-viz] <file.ll> [-o <output-file>]"

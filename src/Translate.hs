@@ -13,17 +13,22 @@ import Data.Maybe (fromJust)
 import TranslateAux
 import AstHelpers
 
-translate :: [Ast.Function Range] -> Gr String () -> Anf.Program
-translate fs gr = Anf.Program (map (buildAnfFromFunction gr) fs)
+import Dominance (buildGraph, dominance)
 
-buildAnfFromFunction :: Gr String () -> Ast.Function Range -> Anf.Function
-buildAnfFromFunction dom (Ast.FunctionDef _ _ name args blocks) = Anf.Function (nameToString name) (anfArgs args) lets
+translate :: [Ast.Function Range] -> Anf.Program
+translate fs = Anf.Program [buildAnfFromFunction (head fs) dom]
   where
-    lets = anfFromTree dom blocks 0
+    g = buildGraph (head fs)
+    dom = dominance g
+
+buildAnfFromFunction :: Ast.Function Range -> Gr String () -> Anf.Function
+buildAnfFromFunction (Ast.FunctionDef _ _ name args blocks) dom = Anf.Function (nameToString name) (anfArgs args) lets
+  where
+    lets = anfFromTree blocks dom 0
 buildAnfFromFunction _ _ = undefined
 
-anfFromTree :: Gr String () -> [Ast.BasicBlock Range] -> Node -> Anf.Let
-anfFromTree gr blocks = dfs where
+anfFromTree :: [Ast.BasicBlock Range] -> Gr String () -> Node -> Anf.Let
+anfFromTree blocks gr = dfs where
   dfs n =
     let
       label = fromJust (lab gr n)
@@ -34,7 +39,8 @@ anfFromTree gr blocks = dfs where
     in nodeLet
 
 anfArgs :: [Ast.ArgumentDef Range] -> [Anf.ArgumentDef]
-anfArgs = map anfArg
+anfArgs [] = [Anf.ArgumentDef "()"]
+anfArgs args = map anfArg args
 
 anfArg :: Ast.ArgumentDef Range -> Anf.ArgumentDef
 anfArg (Ast.ArgumentDef _ _ (Just name)) = Anf.ArgumentDef (nameToString name)
@@ -60,15 +66,15 @@ flowFromBlock _ _ (Ast.FlowReturn ret) = Anf.FlowCall (anfReturn ret)
 flowFromBlock blocks currentLabel (Ast.FlowBranch branch) = anfBranch blocks currentLabel branch
 
 anfBranch :: [Ast.BasicBlock Range] -> String -> Ast.Br Range -> Anf.Flow
-anfBranch blocks currentLabel (Ast.Br _ [goto1]) = Anf.FlowCall call
+anfBranch blocks currentLabel (Ast.Br _ [goto1]) = Anf.FlowCall call -- goto
   where
     gotoLabel = nameToString goto1
     block = findBlock blocks gotoLabel
     callArgs = callArgsFromBlockPhis block currentLabel
     call = Anf.Call (Anf.Name gotoLabel) callArgs
-anfBranch blocks currentLabel (Ast.Br _ (cond:goto1:goto2:_)) = Anf.FlowCond $ Anf.IfThenElse condConst callIf callElse
+anfBranch blocks currentLabel (Ast.Br _ (cond:goto1:goto2:_)) = Anf.FlowCond $ Anf.IfThenElse condValue callIf callElse
   where
-    condConst = constFromName cond
+    condValue = constFromName cond
 
     gotoLabelIf = nameToString goto1
     blockIf = findBlock blocks gotoLabelIf
