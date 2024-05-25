@@ -84,8 +84,5 @@ blockString level = printf (indentEach level ["%s %s=\n", "  let\n%s%s%s"])
 condString :: Int -> String -> String -> String -> String
 condString l = printf (indentEach l ["in if %s == 1\n", "  then %s\n", "  else %s\n"])
 
-gotoString :: Int -> String -> String -> String
-gotoString l = printf (indent l "in %s %s\n")
-
 declString :: String -> String -> String
 declString = printf "%s = %s\n"
