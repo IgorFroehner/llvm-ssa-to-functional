@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFoldable #-}
 
 module Ast (
+  Program(..),
   Name(..),
   IntegerValue(..),
   Value(..),
@@ -25,6 +26,10 @@ module Ast (
   PhiDec(..),
   Flow(..)
 ) where
+
+newtype Program a
+  = Program [Function a]
+  deriving (Foldable, Show)
 
 data Function a
   = FunctionDef a (Type a) (Name a) [ArgumentDef a] [BasicBlock a]

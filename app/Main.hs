@@ -8,7 +8,7 @@ import Translate (translate)
 import qualified Data.ByteString.Lazy as BL
 import System.Environment (getArgs)
 
-import Dominance (buildGraph, dominance)
+import Dominance (buildGraph, dominances, buildGraphs, dominance)
 import PrintAnf (printProgram)
 
 output :: [String] -> String -> IO ()
@@ -25,16 +25,18 @@ main = do
       case runAlex s parseLLVMIR of
         Left err -> putStrLn err
         Right ast -> do
-          let g = buildGraph (head ast)
-          output out (plotGraph g)
+          let gs = buildGraphs ast
+          let result = concatMap plotGraph gs
+          output out result
     ("--dominance-viz":file:out) -> do
       s <- BL.readFile file
       case runAlex s parseLLVMIR of
         Left err -> putStrLn err
         Right ast -> do
-          let g = buildGraph (head ast)
-          let dom = dominance g
-          output out (plotGraph dom)
+          let g = buildGraphs ast
+          let doms = dominances g
+          let result = concatMap plotGraph doms
+          output out result
     (file:out) -> do
       s <- BL.readFile file
       case runAlex s parseLLVMIR of

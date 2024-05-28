@@ -62,11 +62,14 @@ import NameNormalizer
 
 %%
 
+program :: { Program L.Range }
+  : functions { Program $1 }
+
 -- Top Level Productions
-program :: { [Function L.Range] }
-  : program funcDef { $1 ++ [$2] } 
+functions :: { [Function L.Range] }
+  : functions funcDef { $1 ++ [$2] } 
   | funcDef         { [$1] }
-  | program funcDec { $1 ++ [$2] }
+  | functions funcDec { $1 ++ [$2] }
   | funcDec         { [$1] }
 
 -- Funciton Definitions

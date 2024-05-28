@@ -15,10 +15,13 @@ import AstHelpers
 
 import Dominance (buildGraph, dominance)
 
-translate :: [Ast.Function Range] -> Anf.Program
-translate fs = Anf.Program [buildAnfFromFunction (head fs) dom]
+translate :: Ast.Program Range -> Anf.Program
+translate (Ast.Program fs) = Anf.Program $ map translateFunction fs
+
+translateFunction :: Ast.Function Range -> Anf.Function
+translateFunction f = buildAnfFromFunction f dom
   where
-    g = buildGraph (head fs)
+    g = buildGraph f
     dom = dominance g
 
 buildAnfFromFunction :: Ast.Function Range -> Gr String () -> Anf.Function

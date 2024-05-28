@@ -1,5 +1,5 @@
 
-module Dominance (buildGraph, dominance) where
+module Dominance (buildGraph, dominance, buildGraphs, dominances) where
 
 import qualified Ast
 import Lexer
@@ -19,8 +19,14 @@ dominance g = let
     invertDom = map (\(a, b) -> (b, a)) domination
   in buildDomGraph invertDom nodes
 
+dominances :: [Gr String ()] -> [Gr String ()]
+dominances = map dominance
+
 buildDomGraph :: [(Int, Int)] -> [(Int, String)] -> Gr String ()
 buildDomGraph dom nodes = mkGraph nodes (map (\(a, b) -> (a, b, ())) dom)
+
+buildGraphs :: Ast.Program Range -> [Gr String ()]
+buildGraphs (Ast.Program fs) = map buildGraph fs
 
 buildGraph :: Ast.Function Range -> Gr String ()
 buildGraph f = mkGraph nodes edges
