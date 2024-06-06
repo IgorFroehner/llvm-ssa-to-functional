@@ -3,7 +3,7 @@ module Anf (
   Program(..),
   Function(..),
   ArgumentDef(..),
-  Let(..),
+  Lambda(..),
   Expr(..),
   Decl(..),
   ConvOp(..),
@@ -19,20 +19,20 @@ module Anf (
 newtype Program = Program [Function] deriving Show
 
 data Function =
-  Function String [ArgumentDef] Let
+  Function String [ArgumentDef] Lambda
   deriving Show
 
 newtype ArgumentDef =
   ArgumentDef String
   deriving Show
 
-data Let =
-  Let String [ArgumentDef] [Expr] [Let] Flow
+data Lambda =
+  Lambda String [ArgumentDef] [Expr] [Lambda] Flow
   deriving Show
 
-data Expr
-  = ExpCall Call
-  | ExpDecl Decl
+newtype Expr
+  = ExpDecl Decl
+  -- | ExpCall Call
   deriving Show
 
 data Decl

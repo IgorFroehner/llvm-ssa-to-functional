@@ -112,6 +112,7 @@ tokens :-
 <0> dso_local          ;
 <0> noundef            ;
 <0> local_unnamed_addr ;
+<0> unnamed_addr       ;
 <0> int                ;
 <0> returned           ;
 <0> zeroext            ;

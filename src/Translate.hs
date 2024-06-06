@@ -19,79 +19,72 @@ translate :: Ast.Program Range -> Anf.Program
 translate (Ast.Program fs) = Anf.Program $ map translateFunction fs
 
 translateFunction :: Ast.Function Range -> Anf.Function
-translateFunction f = buildAnfFromFunction f dom
+translateFunction function = buildAnfFromFunction function dom
   where
-    g = buildGraph f
+    g = buildGraph function
     dom = dominance g
 
 buildAnfFromFunction :: Ast.Function Range -> Gr String () -> Anf.Function
-buildAnfFromFunction (Ast.FunctionDef _ _ name args blocks) dom = Anf.Function (nameToString name) (anfArgs args) lets
+buildAnfFromFunction (Ast.FunctionDef _ _ name args blocks) dom = Anf.Function (nameToString name) (anfArgs args) lambda
   where
-    lets = anfFromTree blocks dom 0
-buildAnfFromFunction _ _ = undefined
+    lambda = anfFromTree blocks dom 0
+-- buildAnfFromFunction _ _ = undefined
 
-anfFromTree :: [Ast.BasicBlock Range] -> Gr String () -> Node -> Anf.Let
-anfFromTree blocks gr = dfs where
-  dfs n =
-    let
-      label = fromJust (lab gr n)
-      block = findBlock blocks label
-      children = suc gr n
-      childLets = map dfs children
-      nodeLet = translateBlock blocks block childLets
-    in nodeLet
+anfFromTree :: [Ast.BasicBlock Range] -> Gr String () -> Node -> Anf.Lambda
+anfFromTree blocks gr node =
+  let
+    label = fromJust (lab gr node)
+    block = findBlock blocks label
+    children = suc gr node
+    nestedLambdas = map (anfFromTree blocks gr) children
+
+    translateBlock :: Ast.BasicBlock Range -> [Anf.Lambda] -> Anf.Lambda
+    translateBlock (Ast.BasicBlock _ _ phis stmts flow) nested = Anf.Lambda label args blockBindings nested tailCall
+      where
+        args = argsFromPhis phis
+        blockBindings = anfBindings stmts
+        tailCall = tailCallFromBlock blocks label (fromJust flow)
+
+  in translateBlock block nestedLambdas
 
 anfArgs :: [Ast.ArgumentDef Range] -> [Anf.ArgumentDef]
 anfArgs [] = [Anf.ArgumentDef "()"]
 anfArgs args = map anfArg args
-
-anfArg :: Ast.ArgumentDef Range -> Anf.ArgumentDef
-anfArg (Ast.ArgumentDef _ _ (Just name)) = Anf.ArgumentDef (nameToString name)
-anfArg (Ast.ArgumentDef _ _ Nothing) = Anf.ArgumentDef "noname"
-
-translateBlock :: [Ast.BasicBlock Range] -> Ast.BasicBlock Range -> [Anf.Let] -> Anf.Let
-translateBlock blocks (Ast.BasicBlock _ label phis stmts flow) children = Anf.Let name args blockStmts children blockFlow
   where
-    name = nameToString label
-    args = argsFromPhis phis
-    blockStmts = anfStmts stmts
-    blockFlow = flowFromBlock blocks name (fromJust flow)
+    anfArg :: Ast.ArgumentDef Range -> Anf.ArgumentDef
+    anfArg (Ast.ArgumentDef _ _ (Just name)) = Anf.ArgumentDef (nameToString name)
+    anfArg (Ast.ArgumentDef _ _ Nothing) = Anf.ArgumentDef "noname"
 
 argsFromPhis :: [Ast.PhiDec Range] -> [Anf.ArgumentDef]
 argsFromPhis [] = [Anf.ArgumentDef "()"]
 argsFromPhis phis = map argFromPhi phis
+  where
+    argFromPhi :: Ast.PhiDec Range -> Anf.ArgumentDef
+    argFromPhi (Ast.PhiDec _ name _) = Anf.ArgumentDef (nameToString name)
 
-argFromPhi :: Ast.PhiDec Range -> Anf.ArgumentDef
-argFromPhi (Ast.PhiDec _ name _) = Anf.ArgumentDef (nameToString name)
-
-flowFromBlock :: [Ast.BasicBlock Range] -> String -> Ast.Flow Range -> Anf.Flow
-flowFromBlock _ _ (Ast.FlowReturn ret) = Anf.FlowCall (anfReturn ret)
-flowFromBlock blocks currentLabel (Ast.FlowBranch branch) = anfBranch blocks currentLabel branch
+tailCallFromBlock :: [Ast.BasicBlock Range] -> String -> Ast.Flow Range -> Anf.Flow
+tailCallFromBlock _ _ (Ast.FlowReturn ret) = Anf.FlowCall (anfReturn ret)
+tailCallFromBlock blocks currentLabel (Ast.FlowBranch branch) = anfBranch blocks currentLabel branch
 
 anfBranch :: [Ast.BasicBlock Range] -> String -> Ast.Br Range -> Anf.Flow
-anfBranch blocks currentLabel (Ast.Br _ [goto1]) = Anf.FlowCall call -- goto
+anfBranch blocks currentLabel (Ast.Br _ [goto]) = Anf.FlowCall call
   where
-    gotoLabel = nameToString goto1
-    block = findBlock blocks gotoLabel
-    callArgs = callArgsFromBlockPhis block currentLabel
-    call = Anf.Call (Anf.Name gotoLabel) callArgs
-anfBranch blocks currentLabel (Ast.Br _ (cond:goto1:goto2:_)) = Anf.FlowCond $ Anf.IfThenElse condValue callIf callElse
+    call = callFromGoto blocks currentLabel goto
+anfBranch blocks currentLabel (Ast.Br _ (cond:gotoIf:gotoElse:_)) = Anf.FlowCond $ Anf.IfThenElse condValue callIf callElse
   where
-    condValue = constFromName cond
+    condValue = valueFromName cond
 
-    gotoLabelIf = nameToString goto1
-    blockIf = findBlock blocks gotoLabelIf
-    callArgsIf = callArgsFromBlockPhis blockIf currentLabel
-    callIf = Anf.Call (Anf.Name gotoLabelIf) callArgsIf
-
-    gotoLabelElse = nameToString goto2
-    blockElse = findBlock blocks gotoLabelElse
-    callArgsElse = callArgsFromBlockPhis blockElse currentLabel
-    callElse = Anf.Call (Anf.Name gotoLabelElse) callArgsElse
+    callIf = callFromGoto blocks currentLabel gotoIf
+    callElse = callFromGoto blocks currentLabel gotoElse
 anfBranch _ _ _ = undefined
 
-constFromName :: Ast.Name Range -> Anf.Value
-constFromName = Anf.Name . nameToString
+callFromGoto :: [Ast.BasicBlock Range] -> String -> Ast.Name Range -> Anf.Call
+callFromGoto blocks currentLabel gotoLabel = Anf.Call anfName anfArgsCall
+  where
+    gotoName = nameToString gotoLabel
+    block = findBlock blocks gotoName
+    anfName = Anf.Name gotoName
+    anfArgsCall = callArgsFromBlockPhis block currentLabel
 
 callArgsFromBlockPhis :: Ast.BasicBlock Range -> String -> [Anf.Value]
 callArgsFromBlockPhis (Ast.BasicBlock _ _ [] _ _) _ = [Anf.Unit]
@@ -111,12 +104,12 @@ anfReturn :: Ast.Return Range -> Anf.Call
 anfReturn (Ast.Return _ _ (Just valueReturned)) = Anf.Call (anfValue valueReturned) []
 anfReturn (Ast.Return _ _ Nothing) = Anf.Call (Anf.Const 0) []
 
-anfStmts :: [Ast.Stmt Range] -> [Anf.Expr]
-anfStmts = map anfExpr
+anfBindings :: [Ast.Stmt Range] -> [Anf.Expr]
+anfBindings = map anfExpr
 
 anfExpr :: Ast.Stmt Range -> Anf.Expr
 anfExpr (Ast.SDec stmt) = Anf.ExpDecl (anfDec stmt)
-anfExpr (Ast.SCall stmt) = Anf.ExpCall (anfCall stmt)
+-- anfExpr (Ast.SCall stmt) = Anf.ExpCall (anfCall stmt)
 
 anfDec :: Ast.Dec Range -> Anf.Decl
 anfDec (Ast.DecCall _ name call) = Anf.DeclCall (nameToString name) (anfCall call)
@@ -149,3 +142,6 @@ anfCallArg (Ast.CallArgument _ _ value) = anfValue value
 anfValue :: Ast.Value Range -> Anf.Value
 anfValue (Ast.ValueInt (Ast.IntegerValue _ int)) = Anf.Const int
 anfValue (Ast.ValueName name) = Anf.Name (nameToString name)
+
+valueFromName :: Ast.Name Range -> Anf.Value
+valueFromName = Anf.Name . nameToString

@@ -7,7 +7,7 @@ import Lexer
 import TranslateAux (uname)
 import AstHelpers (getLabel)
 
-import Data.Graph.Inductive.PatriciaTree
+import Data.Graph.Inductive.PatriciaTree ( Gr )
 import Data.List (find)
 import Data.Graph.Inductive.Query.Dominators (iDom)
 import Data.Graph.Inductive.Graph (mkGraph, labNodes)
@@ -36,7 +36,7 @@ buildGraph f = mkGraph nodes edges
 
 getEdges :: Ast.Function Range -> [(Int, String)] -> [(Int, Int, ())]
 getEdges (Ast.FunctionDef _ _ _ _ blocks) nodes = concatMap (getBlockEdges nodes) blocks
-getEdges _ _ = []
+-- getEdges _ _ = []
 
 getBlockEdges :: [(Int, String)] -> Ast.BasicBlock Range -> [(Int, Int, ())]
 getBlockEdges nodes block =
@@ -62,7 +62,7 @@ getBranch _ = []
 
 getNodes :: Ast.Function Range -> [(Int, String)]
 getNodes (Ast.FunctionDef _ _ _ _ blocks) = zip [0..] (getLabelBlocks blocks)
-getNodes _ = undefined
+-- getNodes _ = undefined
 
 getLabelBlocks :: [Ast.BasicBlock Range] -> [String]
 getLabelBlocks = foldr (\ b -> (++) [getLabel b]) []

@@ -69,15 +69,15 @@ program :: { Program L.Range }
 functions :: { [Function L.Range] }
   : functions funcDef { $1 ++ [$2] } 
   | funcDef         { [$1] }
-  | functions funcDec { $1 ++ [$2] }
-  | funcDec         { [$1] }
+  -- | functions funcDec { $1 ++ [$2] }
+  -- | funcDec         { [$1] }
 
 -- Funciton Definitions
 funcDef :: { Function L.Range }
   : define typeAnotation gname '(' arguments ')' '{' functionStatementBlocks '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) $2 $3 $5 $8 }
 
-funcDec :: { Function L.Range }
-  : declare typeAnotation gname '(' arguments ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $6) $2 $3 $5 }
+-- funcDec :: { Function L.Range }
+--   : declare typeAnotation gname '(' arguments ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $6) $2 $3 $5 }
 
 arguments :: { [ArgumentDef L.Range] }
   : arguments ',' argument           { $1 ++ [$3] }
@@ -124,8 +124,8 @@ stmts :: { [Stmt L.Range] }
   | stmt                             { [$1] }
 
 stmt :: { Stmt L.Range }
-  : funcCall                         { SCall $1 }
-  | dec                              { SDec $1 }
+  : dec                              { SDec $1 }
+  -- | funcCall                         { SCall $1 }
 
 phiDecs :: { [PhiDec L.Range] }
   : phiDecs phiDec                   { $1 ++ [$2] }

@@ -33,16 +33,16 @@ newtype Program a
 
 data Function a
   = FunctionDef a (Type a) (Name a) [ArgumentDef a] [BasicBlock a]
-  | FunctionDec a (Type a) (Name a) [ArgumentDef a]
+  -- | FunctionDec a (Type a) (Name a) [ArgumentDef a]
   deriving (Foldable, Show)
 
 data BasicBlock a
   = BasicBlock a (Name a) [PhiDec a] [Stmt a] (Maybe (Flow a))
   deriving (Foldable, Show)
 
-data Stmt a
+newtype Stmt a
   = SDec (Dec a)
-  | SCall (Call a)
+  -- | SCall (Call a)
   deriving (Foldable, Show)
 
 data Flow a

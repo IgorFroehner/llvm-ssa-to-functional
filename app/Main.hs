@@ -8,7 +8,7 @@ import Translate (translate)
 import qualified Data.ByteString.Lazy as BL
 import System.Environment (getArgs)
 
-import Dominance (buildGraph, dominances, buildGraphs, dominance)
+import Dominance (dominances, buildGraphs)
 import PrintAnf (printProgram)
 
 output :: [String] -> String -> IO ()
