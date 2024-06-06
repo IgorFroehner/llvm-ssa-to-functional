@@ -7,7 +7,7 @@ import Data.List (intercalate)
 import Anf
 import TranslateAux
 
-import Text.Printf
+import Text.Printf (printf)
 
 header :: String
 header = "import Data.Bits\n\n"
@@ -16,10 +16,11 @@ printProgram :: Program -> String
 printProgram (Program functions) = header ++ intercalate "\n\n" (map printFunction functions)
 
 printFunction :: Function -> String
-printFunction (Function name args lets) = functionString name functionArgs (printLet lets 2) firstBlockLabel
-  where
+printFunction (Function name args lets) =
+  let
     functionArgs = unrollArguments args
     firstBlockLabel = (\(Lambda letName _ _ _ _) -> letName) lets
+  in functionString name functionArgs (printLet lets 2) firstBlockLabel
 
 unrollArguments :: [ArgumentDef] -> String
 unrollArguments ((ArgumentDef name):x) = name ++ " " ++ unrollArguments x
@@ -28,10 +29,10 @@ unrollArguments [] = ""
 printLet :: Lambda -> Int -> String
 printLet (Lambda name args exprs lets flow) l =
   let
-      argsStr = unrollArguments args
-      exprsStr = concatMap (`printExpr` (l + 2)) exprs
-      letsStr = concatMap (`printLet` (l + 2)) lets
-      flowStr = printFlow flow (l + 1)
+    argsStr = unrollArguments args
+    exprsStr = concatMap (`printExpr` (l + 2)) exprs
+    letsStr = concatMap (`printLet` (l + 2)) lets
+    flowStr = printFlow flow (l + 1)
   in blockString l name argsStr exprsStr letsStr flowStr
 
 printExpr :: Expr -> Int -> String

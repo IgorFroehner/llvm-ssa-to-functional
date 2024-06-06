@@ -52,8 +52,8 @@ findNodeId nodes name =
                  Nothing          -> error $ "Node ID not found for block: " ++ name
 
 getBlockBranch :: Ast.BasicBlock Range -> [String]
-getBlockBranch (Ast.BasicBlock _ _ _ _ (Just flow)) = getBranch flow
-getBlockBranch _ = []
+getBlockBranch (Ast.BasicBlock _ _ _ _ flow) = getBranch flow
+-- getBlockBranch _ = []
 
 getBranch :: Ast.Flow Range -> [String]
 getBranch (Ast.FlowBranch (Ast.Br _ [goto])) = [uname goto]

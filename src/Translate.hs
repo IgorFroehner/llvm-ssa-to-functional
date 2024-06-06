@@ -39,52 +39,58 @@ anfFromTree blocks gr node =
     nestedLambdas = map (anfFromTree blocks gr) children
 
     translateBlock :: Ast.BasicBlock Range -> [Anf.Lambda] -> Anf.Lambda
-    translateBlock (Ast.BasicBlock _ _ phis stmts flow) nested = Anf.Lambda label args blockBindings nested tailCall
-      where
+    translateBlock (Ast.BasicBlock _ _ phis stmts flow) nested =
+      let
         args = argsFromPhis phis
         blockBindings = anfBindings stmts
-        tailCall = tailCallFromBlock blocks label (fromJust flow)
+        tailCall = tailCallFromBlock blocks label flow
+      in Anf.Lambda label args blockBindings nested tailCall
 
   in translateBlock block nestedLambdas
 
 anfArgs :: [Ast.ArgumentDef Range] -> [Anf.ArgumentDef]
 anfArgs [] = [Anf.ArgumentDef "()"]
-anfArgs args = map anfArg args
-  where
+anfArgs args =
+  let
     anfArg :: Ast.ArgumentDef Range -> Anf.ArgumentDef
     anfArg (Ast.ArgumentDef _ _ (Just name)) = Anf.ArgumentDef (nameToString name)
     anfArg (Ast.ArgumentDef _ _ Nothing) = Anf.ArgumentDef "noname"
+  in map anfArg args
 
 argsFromPhis :: [Ast.PhiDec Range] -> [Anf.ArgumentDef]
 argsFromPhis [] = [Anf.ArgumentDef "()"]
-argsFromPhis phis = map argFromPhi phis
-  where
+argsFromPhis phis =
+  let
     argFromPhi :: Ast.PhiDec Range -> Anf.ArgumentDef
     argFromPhi (Ast.PhiDec _ name _) = Anf.ArgumentDef (nameToString name)
+  in map argFromPhi phis
 
 tailCallFromBlock :: [Ast.BasicBlock Range] -> String -> Ast.Flow Range -> Anf.Flow
 tailCallFromBlock _ _ (Ast.FlowReturn ret) = Anf.FlowCall (anfReturn ret)
 tailCallFromBlock blocks currentLabel (Ast.FlowBranch branch) = anfBranch blocks currentLabel branch
 
 anfBranch :: [Ast.BasicBlock Range] -> String -> Ast.Br Range -> Anf.Flow
-anfBranch blocks currentLabel (Ast.Br _ [goto]) = Anf.FlowCall call
-  where
+anfBranch blocks currentLabel (Ast.Br _ [goto]) =
+  let
     call = callFromGoto blocks currentLabel goto
-anfBranch blocks currentLabel (Ast.Br _ (cond:gotoIf:gotoElse:_)) = Anf.FlowCond $ Anf.IfThenElse condValue callIf callElse
-  where
+  in Anf.FlowCall call
+anfBranch blocks currentLabel (Ast.Br _ (cond:gotoIf:gotoElse:_)) = 
+  let
     condValue = valueFromName cond
 
     callIf = callFromGoto blocks currentLabel gotoIf
     callElse = callFromGoto blocks currentLabel gotoElse
+  in Anf.FlowCond $ Anf.IfThenElse condValue callIf callElse
 anfBranch _ _ _ = undefined
 
 callFromGoto :: [Ast.BasicBlock Range] -> String -> Ast.Name Range -> Anf.Call
-callFromGoto blocks currentLabel gotoLabel = Anf.Call anfName anfArgsCall
-  where
+callFromGoto blocks currentLabel gotoLabel =
+  let
     gotoName = nameToString gotoLabel
     block = findBlock blocks gotoName
     anfName = Anf.Name gotoName
     anfArgsCall = callArgsFromBlockPhis block currentLabel
+  in Anf.Call anfName anfArgsCall
 
 callArgsFromBlockPhis :: Ast.BasicBlock Range -> String -> [Anf.Value]
 callArgsFromBlockPhis (Ast.BasicBlock _ _ [] _ _) _ = [Anf.Unit]

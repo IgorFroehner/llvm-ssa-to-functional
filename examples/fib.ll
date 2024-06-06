@@ -9,7 +9,6 @@ entry:
   %6 = phi i32 [ %5, %3 ], [ 0, %entry ]
   %7 = add nsw i32 %4, -1
   %8 = add nsw i32 %5, %6
-  ; tail call void @test()
   %9 = icmp eq i32 %7, 0
   br i1 %9, label %10, label %3
 

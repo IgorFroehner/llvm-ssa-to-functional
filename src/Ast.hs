@@ -37,7 +37,7 @@ data Function a
   deriving (Foldable, Show)
 
 data BasicBlock a
-  = BasicBlock a (Name a) [PhiDec a] [Stmt a] (Maybe (Flow a))
+  = BasicBlock a (Name a) [PhiDec a] [Stmt a] (Flow a)
   deriving (Foldable, Show)
 
 newtype Stmt a
