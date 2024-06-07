@@ -16,18 +16,20 @@ module Anf (
   Value(..),
 ) where
 
+import Data.ByteString.Lazy.Char8 (ByteString)
+
 newtype Program = Program [Function] deriving Show
 
 data Function =
-  Function String [ArgumentDef] Lambda
+  Function ByteString [ArgumentDef] Lambda
   deriving Show
 
 newtype ArgumentDef =
-  ArgumentDef String
+  ArgumentDef ByteString
   deriving Show
 
 data Lambda =
-  Lambda String [ArgumentDef] [Expr] [Lambda] Flow
+  Lambda ByteString [ArgumentDef] [Expr] [Lambda] Flow
   deriving Show
 
 newtype Expr
@@ -36,11 +38,11 @@ newtype Expr
   deriving Show
 
 data Decl
-  = DeclBinOp String BinOp
-  | DeclCall String Call
-  | DeclIcmp String Icmp
-  | DeclSelect String Select
-  | DeclConvOp String ConvOp
+  = DeclBinOp ByteString BinOp
+  | DeclCall ByteString Call
+  | DeclIcmp ByteString Icmp
+  | DeclSelect ByteString Select
+  | DeclConvOp ByteString ConvOp
   deriving Show
 
 newtype ConvOp
@@ -52,7 +54,7 @@ data Select
   deriving Show
 
 data Icmp
-  = Icmp String Value Value
+  = Icmp ByteString Value Value
   deriving Show
 
 data Flow
@@ -61,7 +63,7 @@ data Flow
   deriving Show
 
 data BinOp
-  = BinOp String Value Value
+  = BinOp ByteString Value Value
   deriving Show
 
 data Call
@@ -74,6 +76,6 @@ data IfThenElse
 
 data Value
   = Const Integer
-  | Name String
+  | Name ByteString
   | Unit
   deriving Show

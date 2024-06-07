@@ -27,6 +27,8 @@ module Ast (
   Flow(..)
 ) where
 
+import Data.ByteString.Lazy.Char8 (ByteString)
+
 newtype Program a
   = Program [Function a]
   deriving (Foldable, Show)
@@ -95,8 +97,8 @@ newtype Branch a
   deriving (Foldable, Show)
 
 data Name a
-  = LName a String
-  | GName a String
+  = LName a ByteString
+  | GName a ByteString
   deriving (Foldable, Show)
 
 data IntegerValue a
@@ -109,7 +111,7 @@ data Value a
   deriving (Foldable, Show)
 
 data Type a
-  = Type a String
+  = Type a ByteString
   deriving (Foldable, Show)
 
 data CallArgument a
@@ -121,7 +123,7 @@ data ArgumentDef a
   deriving (Foldable, Show)
 
 data Cmp a
-  = Cmp a String
+  = Cmp a ByteString
   deriving (Foldable, Show)
 
 data Br a
@@ -129,9 +131,9 @@ data Br a
   deriving (Foldable, Show)
 
 data BinOp a
-  = BinOp a String
+  = BinOp a ByteString
   deriving (Foldable, Show)
 
 data ConvOp a
-  = ConvOp a String
+  = ConvOp a ByteString
   deriving (Foldable, Show)

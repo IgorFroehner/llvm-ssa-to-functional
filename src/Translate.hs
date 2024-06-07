@@ -1,18 +1,16 @@
 
 module Translate (translate) where
 
-import Lexer
-
-import qualified Ast
-import qualified Anf
-
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph (lab, suc, Node)
 import Data.Maybe (fromJust)
 
+import Lexer
+import qualified Ast
+import qualified Anf
+
 import TranslateAux
 import AstHelpers
-
 import Dominance (buildGraph, dominance)
 
 translate :: Ast.Program Range -> Anf.Program

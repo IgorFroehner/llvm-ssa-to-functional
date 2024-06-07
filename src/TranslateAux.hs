@@ -13,8 +13,10 @@ import qualified Ast
 import Lexer
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import Data.ByteString.Lazy.Char8 (ByteString)
+import Data.Int (Int64)
 
-nameToString :: Ast.Name Range -> String
+nameToString :: Ast.Name Range -> ByteString
 nameToString (Ast.GName _ name) = name
 nameToString (Ast.LName _ name) = name
 
@@ -51,12 +53,12 @@ translateOperator str = case str of
 unpack :: LBS.ByteString -> String
 unpack = LBS.unpack
 
-uname :: Ast.Name Range -> String
+uname :: Ast.Name Range -> ByteString
 uname (Ast.LName _ name) = name
 uname (Ast.GName _ name) = name
 
-indent :: Int -> String -> String
-indent level str = replicate (level * 2) ' ' ++ str
+indent :: Int -> ByteString -> ByteString
+indent level = LBS.append (LBS.replicate (fromIntegral level * 2) ' ')
 
-indentEach :: Int -> [String] -> String
-indentEach level = concatMap (indent level)
+indentEach :: Int -> [ByteString] -> ByteString
+indentEach level input = LBS.concat $ map (indent level) input

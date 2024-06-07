@@ -4,20 +4,17 @@ module NameNormalizer (normalizeName, normalizeBlockName, normalizeOp) where
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.ByteString.Lazy.Char8 (ByteString)
 
-normalizeName :: ByteString -> String
-normalizeName name = "a" ++ removePunc (unpack name)
+normalizeName :: ByteString -> ByteString
+normalizeName name = LBS.cons 'a' (removePunc name)
 
-normalizeOp :: ByteString -> String
-normalizeOp name = removePunc (unpack name)
+normalizeOp :: ByteString -> ByteString
+normalizeOp = removePunc
 
-normalizeBlockName :: ByteString -> String
-normalizeBlockName name = "f" ++ removePunc (unpack name)
+normalizeBlockName :: ByteString -> ByteString
+normalizeBlockName name = LBS.cons 'f' (removePunc name)
 
-removePunc :: String -> String
-removePunc = filter (`notElem` punctuation)
+removePunc :: ByteString -> ByteString
+removePunc = LBS.filter (`notElem` punctuation)
   where
     punctuation :: [Char]
     punctuation = ",.?!-:;\"'%@"
-
-unpack :: LBS.ByteString -> String
-unpack = LBS.unpack
