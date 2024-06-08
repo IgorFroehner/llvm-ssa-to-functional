@@ -16,25 +16,25 @@ module Anf (
   Value(..),
 ) where
 
-newtype Program = Program [Function] deriving Show
+newtype Program = Program [Function] deriving (Show, Eq)
 
 -- put a call to the first block in the end of the function
 data Function =
   Function String [ArgumentDef] Lambda Call
-  deriving Show
+  deriving (Show, Eq)
 
 newtype ArgumentDef =
   ArgumentDef String
-  deriving Show
+  deriving (Show, Eq)
 
 data Lambda =
   Lambda String [ArgumentDef] [Expr] [Lambda] Flow
-  deriving Show
+  deriving (Show, Eq)
 
 newtype Expr
   = ExpDecl Decl
   -- | ExpCall Call
-  deriving Show
+  deriving (Show, Eq)
 
 data Decl
   = DeclBinOp String BinOp
@@ -42,39 +42,39 @@ data Decl
   | DeclIcmp String Icmp
   | DeclSelect String Select
   | DeclConvOp String ConvOp
-  deriving Show
+  deriving (Show, Eq)
 
 newtype ConvOp
   = ConvOp Value
-  deriving Show
+  deriving (Show, Eq)
 
 data Select
   = Select Value Value Value
-  deriving Show
+  deriving (Show, Eq)
 
 data Icmp
   = Icmp String Value Value
-  deriving Show
+  deriving (Show, Eq)
 
 data Flow
   = FlowCall Call
   | FlowCond IfThenElse
-  deriving Show
+  deriving (Show, Eq)
 
 data BinOp
   = BinOp String Value Value
-  deriving Show
+  deriving (Show, Eq)
 
 data Call
   = Call Value [Value]
-  deriving Show
+  deriving (Show, Eq)
 
 data IfThenElse
   = IfThenElse Value Call Call
-  deriving Show
+  deriving (Show, Eq)
 
 data Value
   = Const Integer
   | Name String
   | Unit
-  deriving Show
+  deriving (Show, Eq)
