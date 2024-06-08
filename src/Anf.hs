@@ -18,8 +18,9 @@ module Anf (
 
 newtype Program = Program [Function] deriving Show
 
+-- put a call to the first block in the end of the function
 data Function =
-  Function String [ArgumentDef] Lambda
+  Function String [ArgumentDef] Lambda Call
   deriving Show
 
 newtype ArgumentDef =

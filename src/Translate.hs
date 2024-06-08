@@ -25,10 +25,15 @@ translateFunction function = buildAnfFromFunction function dom
     dom = dominance g
 
 buildAnfFromFunction :: Ast.Function Range -> Gr String () -> Anf.Function
-buildAnfFromFunction (Ast.FunctionDef _ _ name args blocks) dom = Anf.Function (nameToString name) (anfArgs args) lambda
+buildAnfFromFunction (Ast.FunctionDef _ _ name args blocks) dom = Anf.Function (nameToString name) (anfArgs args) lambda callFirstBlock
   where
     lambda = anfFromTree blocks dom 0
+    firstBlockLabel = firstBlockName blocks
+    callFirstBlock = Anf.Call (Anf.Name firstBlockLabel) []
 -- buildAnfFromFunction _ _ = undefined
+
+firstBlockName :: [Ast.BasicBlock Range] -> String
+firstBlockName = getLabel . head
 
 anfFromTree :: [Ast.BasicBlock Range] -> Gr String () -> Node -> Anf.Lambda
 anfFromTree blocks gr node =

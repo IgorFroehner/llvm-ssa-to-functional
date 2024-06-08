@@ -16,24 +16,24 @@ printProgram :: Program -> String
 printProgram (Program functions) = header ++ intercalate "\n\n" (map printFunction functions)
 
 printFunction :: Function -> String
-printFunction (Function name args lets) =
+printFunction (Function name args lambda call) =
   let
     functionArgs = unrollArguments args
-    firstBlockLabel = (\(Lambda letName _ _ _ _) -> letName) lets
-  in functionString name functionArgs (printLet lets 2) firstBlockLabel
+    firstBlockLabel = printCall call
+  in functionString name functionArgs (printLet lambda 2) firstBlockLabel
 
 unrollArguments :: [ArgumentDef] -> String
 unrollArguments ((ArgumentDef name):x) = name ++ " " ++ unrollArguments x
 unrollArguments [] = ""
 
 printLet :: Lambda -> Int -> String
-printLet (Lambda name args exprs lets flow) l =
+printLet (Lambda name args exprs lets flow) level =
   let
-    argsStr = unrollArguments args
-    exprsStr = concatMap (`printExpr` (l + 2)) exprs
-    letsStr = concatMap (`printLet` (l + 2)) lets
-    flowStr = printFlow flow (l + 1)
-  in blockString l name argsStr exprsStr letsStr flowStr
+    lambdaArgs = unrollArguments args
+    bindings = concatMap (`printExpr` (level + 2)) exprs
+    nestedLambdas = concatMap (`printLet` (level + 2)) lets
+    tailCall = printTailCall flow (level + 1)
+  in blockString level name lambdaArgs bindings nestedLambdas tailCall
 
 printExpr :: Expr -> Int -> String
 printExpr (ExpDecl decl) l = indent l $ printDecl decl
@@ -68,9 +68,9 @@ printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c
 printValue (Name n) = n
 printValue Unit = "()"
 
-printFlow :: Flow -> Int -> String
-printFlow (FlowCall call) l = indent l "in " ++ printCall call ++ "\n"
-printFlow (FlowCond cond) l = printCond cond l
+printTailCall :: Flow -> Int -> String
+printTailCall (FlowCall call) l = indent l "in " ++ printCall call ++ "\n"
+printTailCall (FlowCond cond) l = printCond cond l
 
 printCond :: IfThenElse -> Int -> String
 printCond (IfThenElse cond thenCall elseCall) l = condString l (printValue cond) (printCall thenCall) (printCall elseCall)
@@ -82,7 +82,7 @@ blockString :: Int -> String -> String -> String -> String -> String -> String
 blockString level = printf (indentEach level ["%s %s=\n", "  let\n%s%s%s"])
 
 condString :: Int -> String -> String -> String -> String
-condString l = printf (indentEach l ["in if %s == 1\n", "  then %s\n", "  else %s\n"])
+condString l = printf (indentEach l ["in if %s /= 0\n", "  then %s\n", "  else %s\n"])
 
 declString :: String -> String -> String
 declString = printf "%s = %s\n"
