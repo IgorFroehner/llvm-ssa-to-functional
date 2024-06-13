@@ -55,7 +55,7 @@ printIcmp :: Icmp -> String
 printIcmp (Icmp cmp a b) = printf "if %s %s %s then 1 else 0" (printValue a) (translateCmpType cmp) (printValue b)
 
 printSelect :: Select -> String
-printSelect (Select a b c) = printf "if %s == 1 then %s else %s" (printValue a) (printValue b) (printValue c)
+printSelect (Select a b c) = printf "if %s /= 0 then %s else %s" (printValue a) (printValue b) (printValue c)
 
 printConvOp :: ConvOp -> String
 printConvOp (ConvOp value) = printValue value

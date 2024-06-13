@@ -16,5 +16,3 @@ entry:
   %11 = phi i32 [ 1, %entry ], [ %8, %3 ]
   ret i32 %11
 }
-
-; declare void @test() local_unnamed_addr #1

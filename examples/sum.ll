@@ -4,8 +4,8 @@ entry:
   br i1 %2, label %14, label %3
 
 3:
-  %4 = shl nuw i32 %0 , 1
-  %5 = add nsw i32 %0 , -1
+  %4 = shl nuw i32 %0, 1
+  %5 = add nsw i32 %0, -1
   %6 = zext i32 %5 to i33
   %7 = add nsw i32 %0, -2
   %8 = zext i32 %7 to i33

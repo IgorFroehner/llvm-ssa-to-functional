@@ -5,9 +5,6 @@ import System.Directory (listDirectory)
 import System.FilePath ((</>))
 import Control.Monad (forM_)
 
-import Data.Graph.Inductive.PatriciaTree
-import Data.Graph.Inductive.Graph (mkGraph)
-
 import Lexer
 import Parser
 import qualified Ast
@@ -37,3 +34,8 @@ main = hspec $ do
   describe "Parser.parseLLVMIR" $ do
     it "parses all examples as expected" $ do
       parsesAllExaples "examples"
+  
+  describe "Translate.translate" $ do
+    it "translates correctly a empty program" $ do
+      let ast = Ast.Program []
+      translate ast `shouldBe` Anf.Program []

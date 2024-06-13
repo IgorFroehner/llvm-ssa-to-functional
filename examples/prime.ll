@@ -1,5 +1,4 @@
-define dso_local noundef zeroext i1 @isPrime(i32 noundef %0) local_unnamed_addr #0 {
-entry:
+define dso_local noundef zeroext i1 @is_prime(i32 noundef %0) local_unnamed_addr #0 {
   %2 = icmp slt i32 %0, 2
   br i1 %2, label %16, label %3
 
@@ -18,12 +17,12 @@ entry:
   br i1 %12, label %16, label %13
 
 13:
-  %14 = urem i32 %0, %10
+  %14 = srem i32 %0, %10
   %15 = icmp eq i32 %14, 0
   br i1 %15, label %16, label %8
 
 16:
-  %17 = phi i1 [ false, %entry ], [ %4, %3 ], [ %12, %13 ], [ %12, %8 ]
+  %17 = phi i1 [ false, %1 ], [ %4, %3 ], [ %12, %13 ], [ %12, %8 ]
   ret i1 %17
 }
 
