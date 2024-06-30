@@ -1,7 +1,7 @@
 # llvm-ir-to-functional
 
 LLVM grounds it's [IR](https://llvm.org/docs/LangRef.html) in [SSA (Single Static Assignment)](https://en.wikipedia.org/wiki/Static_single-assignment_form) form, SSA is proven to be equivalent of 
-functional programming and [Administrative Normal Form](https://en.wikipedia.org/wiki/A-normal_form) (ANF) [(Kelsey 1998)](https://doi.org/10.1145/278283.278285) 
+functional programming and ANF [Administrative Normal Form](https://en.wikipedia.org/wiki/A-normal_form) [(Kelsey 1998)](https://doi.org/10.1145/278283.278285) 
 [(Chakravarty, Keller, Zadarnowski 2003)](https://doi.org/10.1016/S1571-0661(05)82596-4). This project
 explores the translation of the LLVM-IR in SSA form to ANF in Haskell.
 
