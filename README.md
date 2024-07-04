@@ -5,6 +5,11 @@ functional programming and [ANF (Administrative Normal Form)](https://en.wikiped
 [(Chakravarty, Keller, Zadarnowski 2003)](https://doi.org/10.1016/S1571-0661(05)82596-4). This project
 explores the translation of the LLVM-IR in SSA form to ANF in Haskell.
 
+But this is only for a restricted subset of the LLVM-IR that comprehends only 
+simple integer types (no arrays, pointers or composites). It doen't accept any
+type of instruction that would require side effects handling as I/O, or other system calls.
+It requires that all registers and blocks are named (even the first block). But given these restrictions it generates executable Haskell code.
+
 ### Example
 
 #### Source LLVM-IR
