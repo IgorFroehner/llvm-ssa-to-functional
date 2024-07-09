@@ -5,6 +5,6 @@
 a
 a.hs
 *.cpp
-*.png
 mynotes.md
 ./*.ll
+out/
