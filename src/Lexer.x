@@ -68,7 +68,7 @@ tokens :-
 <0> zext          { createToken ConvOp }
 <0> sext          { createToken ConvOp }
 
--- Markers / Operators
+-- Markers
 <0> "="         { tok Assign }
 <0> "{"         { tok LCurlyBracket }
 <0> "}"         { tok RCurlyBracket }
