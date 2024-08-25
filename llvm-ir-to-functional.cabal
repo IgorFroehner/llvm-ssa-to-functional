@@ -79,6 +79,10 @@ test-suite llvm-ir-to-functional-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ExamplesSpec
+      LexerSpec
+      Main
+      TranslateSpec
       Paths_llvm_ir_to_functional
   autogen-modules:
       Paths_llvm_ir_to_functional
