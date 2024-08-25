@@ -218,9 +218,6 @@ createToken tokenConstructor inp@(_, _, str, _) len =
     , rtRange = mkRange inp len
     }
 
-tokBasicBlock :: AlexAction RangedToken
-tokBasicBlock = createToken BasicBlock
-
 scanMany :: ByteString -> Either String [RangedToken]
 scanMany input = runAlex input go
   where
