@@ -83,8 +83,8 @@ tokens :-
 <0> ([a-zA-Z_0-9])+ ":" { createToken BasicBlock }
 
 -- Identifiers
-<0> @global_id     { tokGlobalId }
-<0> @local_id      { tokLocalId }
+<0> @global_id     { createToken GIdentifier }
+<0> @local_id      { createToken LIdentifier }
 
 -- Types, handling this way for now because I don't know how we're gonna use this
 <0> (void | label | i$digit+ | half | float | double | fp128 | ptr) { createToken Type }
@@ -194,20 +194,6 @@ tok :: Token -> AlexAction RangedToken
 tok ctor inp len =
   pure RangedToken
     { rtToken = ctor
-    , rtRange = mkRange inp len
-    }
-
-tokGlobalId :: AlexAction RangedToken
-tokGlobalId inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = GIdentifier $ BS.take len str
-    , rtRange = mkRange inp len
-    }
-
-tokLocalId :: AlexAction RangedToken
-tokLocalId inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = LIdentifier $ BS.take len str
     , rtRange = mkRange inp len
     }
 

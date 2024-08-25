@@ -22,5 +22,5 @@ parsesAllExaples dir = do
 spec :: Spec
 spec = parallel $ do
   describe "Parser.parseLLVMIR" $ do
-    it "parses all examples as expected" $ do
+    it "parses all examples without erroring" $ do
       parsesAllExaples "examples"
