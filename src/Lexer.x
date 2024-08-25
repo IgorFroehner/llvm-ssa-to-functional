@@ -49,24 +49,24 @@ tokens :-
 
 -- Operations
 
-<0> add           { tokBinOp }
-<0> sub           { tokBinOp }
-<0> mul           { tokBinOp }
-<0> udiv          { tokBinOp }
-<0> sdiv          { tokBinOp }
-<0> urem          { tokBinOp }
-<0> srem          { tokBinOp }
+<0> add           { createToken BinOp }
+<0> sub           { createToken BinOp }
+<0> mul           { createToken BinOp }
+<0> udiv          { createToken BinOp }
+<0> sdiv          { createToken BinOp }
+<0> urem          { createToken BinOp }
+<0> srem          { createToken BinOp }
 -- Bitwise
-<0> and           { tokBinOp }
-<0> or            { tokBinOp }
-<0> shl           { tokBinOp }
-<0> lshr          { tokBinOp }
-<0> xor           { tokBinOp }
+<0> and           { createToken BinOp }
+<0> or            { createToken BinOp }
+<0> shl           { createToken BinOp }
+<0> lshr          { createToken BinOp }
+<0> xor           { createToken BinOp }
 
 -- Conversion operations
-<0> trunc         { tokConvOp }
-<0> zext          { tokConvOp }
-<0> sext          { tokConvOp }
+<0> trunc         { createToken ConvOp }
+<0> zext          { createToken ConvOp }
+<0> sext          { createToken ConvOp }
 
 -- Markers / Operators
 <0> "="         { tok Assign }
@@ -80,23 +80,23 @@ tokens :-
 <0> to          { tok To }
 
 -- Beginning of a block
-<0> ([a-zA-Z_0-9])+ ":" { tokBasicBlock }
+<0> ([a-zA-Z_0-9])+ ":" { createToken BasicBlock }
 
 -- Identifiers
 <0> @global_id     { tokGlobalId }
 <0> @local_id      { tokLocalId }
 
 -- Types, handling this way for now because I don't know how we're gonna use this
-<0> (void | label | i$digit+ | half | float | double | fp128 | ptr) { tokType }
+<0> (void | label | i$digit+ | half | float | double | fp128 | ptr) { createToken Type }
 
 -- Constants
 <0> \-?$digit+   { tokInteger }
-<0> \"[^\"]*\"   { tokString }
+<0> \"[^\"]*\"   { createToken String }
 <0> false | true { tokInteger }
 
 -- Types of comparison
 
-<0> (eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle) { tokCmp }
+<0> (eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle) { createToken Cmp }
 
 -- Ignore for now
 <0> "#"$digit+         ;
@@ -225,47 +225,15 @@ tokInteger inp@(_, _, str, _) len =
       , rtRange = mkRange inp len
       }
 
-tokString :: AlexAction RangedToken
-tokString inp@(_, _, str, _) len =
+createToken :: (BS.ByteString -> Token) -> AlexAction RangedToken
+createToken tokenConstructor inp@(_, _, str, _) len =
   pure RangedToken
-    { rtToken = String $ BS.take len str
-    , rtRange = mkRange inp len
-    }
-
-tokType :: AlexAction RangedToken
-tokType inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = Type $ BS.take len str
+    { rtToken = tokenConstructor $ BS.take len str
     , rtRange = mkRange inp len
     }
 
 tokBasicBlock :: AlexAction RangedToken
-tokBasicBlock inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = BasicBlock $ BS.take len str
-    , rtRange = mkRange inp len
-    }
-
-tokCmp :: AlexAction RangedToken
-tokCmp inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = Cmp $ BS.take len str
-    , rtRange = mkRange inp len
-    }
-
-tokBinOp :: AlexAction RangedToken
-tokBinOp inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = BinOp $ BS.take len str
-    , rtRange = mkRange inp len
-    }
-
-tokConvOp :: AlexAction RangedToken
-tokConvOp inp@(_, _, str, _) len =
-  pure RangedToken
-    { rtToken = ConvOp $ BS.take len str
-    , rtRange = mkRange inp len
-    }
+tokBasicBlock = createToken BasicBlock
 
 scanMany :: ByteString -> Either String [RangedToken]
 scanMany input = runAlex input go

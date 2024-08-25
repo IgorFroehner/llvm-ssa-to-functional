@@ -8,3 +8,4 @@ a.hs
 mynotes.md
 ./*.ll
 out/
+out.hs

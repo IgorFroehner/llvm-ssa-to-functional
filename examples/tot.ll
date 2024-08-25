@@ -1,18 +1,18 @@
 define dso_local noundef i32 @phi(i32 noundef %0) local_unnamed_addr #0 {
-entry:
+1:
   %2 = icmp slt i32 %0, 4
   br i1 %2, label %3, label %7
 
 3:
-  %4 = phi i32 [ %0, %entry ], [ %26, %25 ]
-  %5 = phi i32 [ %0, %entry ], [ %27, %25 ]
+  %4 = phi i32 [ %0, %1 ], [ %26, %25 ]
+  %5 = phi i32 [ %0, %1 ], [ %27, %25 ]
   %6 = icmp sgt i32 %4, 1
   br i1 %6, label %31, label %34
 
 7:
-  %8 = phi i32 [ %28, %25 ], [ 2, %entry ]
-  %9 = phi i32 [ %27, %25 ], [ %0, %entry ]
-  %10 = phi i32 [ %26, %25 ], [ %0, %entry ]
+  %8 = phi i32 [ %28, %25 ], [ 2, %1 ]
+  %9 = phi i32 [ %27, %25 ], [ %0, %1 ]
+  %10 = phi i32 [ %26, %25 ], [ %0, %1 ]
   %11 = srem i32 %10, %8
   %12 = icmp eq i32 %11, 0
   br i1 %12, label %13, label %25

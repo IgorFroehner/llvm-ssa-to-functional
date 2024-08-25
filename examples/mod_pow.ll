@@ -1,12 +1,12 @@
 define dso_local noundef i64 @exp_mod(i64 noundef %0, i64 noundef %1, i64 noundef %2) local_unnamed_addr #0 {
-entry:
+3:
   %4 = icmp eq i64 %1, 0
   br i1 %4, label %21, label %5
 
 5:
-  %6 = phi i64 [ %15, %14 ], [ 1, %entry ]
-  %7 = phi i64 [ %17, %14 ], [ %0, %entry ]
-  %8 = phi i64 [ %18, %14 ], [ %1, %entry ]
+  %6 = phi i64 [ %15, %14 ], [ 1, %3 ]
+  %7 = phi i64 [ %17, %14 ], [ %0, %3 ]
+  %8 = phi i64 [ %18, %14 ], [ %1, %3 ]
   %9 = and i64 %8, 1
   %10 = icmp eq i64 %9, 0
   br i1 %10, label %14, label %11
@@ -26,7 +26,7 @@ entry:
   br i1 %20, label %21, label %5
 
 21:
-  %22 = phi i64 [ 1, %entry ], [ %15, %14 ]
+  %22 = phi i64 [ 1, %3 ], [ %15, %14 ]
   ret i64 %22
 }
 

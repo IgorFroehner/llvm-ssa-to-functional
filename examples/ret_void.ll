@@ -1,4 +1,4 @@
 define void @do_nothing() {
-start:
+0:
   ret void
 }

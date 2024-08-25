@@ -1,4 +1,5 @@
 define dso_local noundef zeroext i1 @is_prime(i32 noundef %0) local_unnamed_addr #0 {
+1:
   %2 = icmp slt i32 %0, 2
   br i1 %2, label %16, label %3
 

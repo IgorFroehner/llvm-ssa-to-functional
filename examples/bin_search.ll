@@ -1,5 +1,5 @@
 define dso_local noundef i32 @bin_search(i32 noundef %0) local_unnamed_addr #0 {
-entry:
+1:
   %2 = icmp sgt i32 %0, 1
   br i1 %2, label %3, label %16
 
@@ -21,7 +21,7 @@ entry:
   br i1 %15, label %5, label %16
 
 16:
-  %17 = phi i32 [ 0, %entry ], [ %14, %5 ]
+  %17 = phi i32 [ 0, %1 ], [ %14, %5 ]
   ret i32 %17
 }
 
