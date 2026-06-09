@@ -8,7 +8,7 @@ explores the translation of the LLVM-IR in SSA form to ANF in Haskell.
 But this is only for a restricted subset of the LLVM-IR that comprehends only 
 simple integer types (no arrays, pointers or composites). It doen't accept any
 type of instruction that would require side effects handling as I/O, or other system calls.
-It requires that all registers and blocks are named (even the first block). But given these restrictions it generates executable Haskell code.
+It requires that all registers and blocks are named, except for the entry block, whose label is optional (LLVM omits it for single-block functions). But given these restrictions it generates executable Haskell code.
 
 ### Example
 

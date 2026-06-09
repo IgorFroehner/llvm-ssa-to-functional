@@ -15,9 +15,10 @@ The translation is intentionally restricted to a **subset of LLVM-IR**:
 - Only simple integer types — no arrays, pointers, or composite/aggregate types.
 - No side-effecting instructions (no I/O, no syscalls, `load`/`store`/`getelementptr`
   are lexed/declared but not translated).
-- **All registers and blocks must be named, including the first block.** The
-  parser does not synthesize a label for an implicit entry block (the commented-out
-  `initialStatementsBlock` in `Parser.y` was the abandoned attempt at this).
+- **All registers and blocks must be named, except the entry block** — its label
+  is optional (LLVM omits it for single-block functions). The `initialStatementsBlock`
+  production in `Parser.y` parses an unlabeled entry and synthesizes the label
+  `"entryblock"` (collision-safe, since `normalizeName` always prefixes `a`).
 
 ## Commands
 
