@@ -90,7 +90,7 @@ argument :: { ArgumentDef L.Range }
 
 functionStatementBlocks :: { [BasicBlock L.Range] }
   : blocks                           { $1 }
-  -- : initialStatementsBlock blocks    { $1 : $2 }
+  | initialStatementsBlock blocks    { $1 : $2 }
 
 blocks :: { [BasicBlock L.Range] }
   : block blocks                     { $1 : $2 }
@@ -105,10 +105,12 @@ block :: { BasicBlock L.Range }
 blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeName label)) }
 
--- initialStatementsBlock :: { BasicBlock L.Range }
---   : stmts flow                     { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "a1") [] $1 (Just $2) }
---   | flow                           { BasicBlock (info $1) (LName (info $1) "a1") [] [] (Just $1) }
---   | stmts                            { BasicBlock (info (head $1) <-> info (last $1)) (LName (info (head $1)) "a1") [] $1 Nothing }
+-- An unlabeled entry block (LLVM omits the entry label when clang emits IR).
+-- It can only appear first, and gets a synthesized label. "entryblock" cannot
+-- collide with any register/block name, since normalizeName always prefixes "a".
+initialStatementsBlock :: { BasicBlock L.Range }
+  : stmts flow                     { BasicBlock (info (head $1) <-> info $2) (LName (info (head $1)) "entryblock") [] $1 $2 }
+  | flow                           { BasicBlock (info $1) (LName (info $1) "entryblock") [] [] $1 }
 
 flow :: { Flow L.Range }
   : brCall                           { FlowBranch $1 }
