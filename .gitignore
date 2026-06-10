@@ -4,7 +4,6 @@
 *.dot
 a
 a.hs
-*.cpp
 mynotes.md
 ./*.ll
 out/

@@ -1,5 +1,4 @@
 define dso_local noundef i64 @exp_mod(i64 noundef %0, i64 noundef %1, i64 noundef %2) local_unnamed_addr #0 {
-3:
   %4 = icmp eq i64 %1, 0
   br i1 %4, label %21, label %5
 

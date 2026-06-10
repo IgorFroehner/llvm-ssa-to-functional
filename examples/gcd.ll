@@ -1,5 +1,4 @@
 define i32 @euclides_gcd(i32 noundef %0, i32 noundef %1) local_unnamed_addr #0 {
-2:
   br label %3
 
 3:
