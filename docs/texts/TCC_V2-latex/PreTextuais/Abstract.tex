@@ -1,0 +1,13 @@
+% ---
+% Abstract
+% ---
+
+% resumo em inglês
+\begin{resumo}[Abstract]
+ \begin{otherlanguage*}{english}
+    Through the process of translating code from a source language to machine code, compilers use a variety of Intermediate Representations (IRs) to assist the code analysis and translation \cite{dragao}. The Static Single-Assignment (SSA) is a intermediate representation that makes more efficient some code optimization algorithms, especially those related to the program's data flow, being used by several tools like GCC and LLVM \cite{muchnick1997advanced}. The LLVM (Low Level Virtual Machine) framework grounds its intermediate representation (LLVM-IR) in the SSA form. \cite{appel1998ssa} showed that the Static Single-Assignment is equivalent to the functional programming paradigm and introduced an algorithm for translating between the two. More formally, \citeonline{ssaToAnf} defined a algorithm that translates statically the SSA form to another IR, which is used by functional programming languages' compilers, the ANF (Administrative Normal Form). Given the equivalence between Static Single-Assignment (SSA) and the functional paradigm in ANF, and considering the LLVM's use of SSA form as its intermediate representation, this work investigates the potential for translating LLVM-IR into functional code in ANF. To achieve this, a subset of LLVM-IR was defined, and then a parser and the translator were developed. In this LLVM-IR subset, side effects are restricted, ensuring that the translated functions are pure. Additionally, the types are limited to simple integers, excluding arrays, pointers, or composite types. With a valid input, the developed translator produces executable Haskell code as its output.
+
+   \textbf{Keywords}: Compilers, Intermediate Representation, Functional Programming, SSA, ANF.
+ \end{otherlanguage*}
+\end{resumo}
+

@@ -1,0 +1,143 @@
+
+% ---
+% Inserir folha de aprovação
+% ---
+
+% Isto é um exemplo de Folha de aprovação, elemento obrigatório da NBR
+% 14724/2011 (seção 4.2.1.3). Você pode utilizar este modelo até a aprovação
+% do trabalho. Após isso, substitua todo o conteúdo deste arquivo por uma
+% imagem da página assinada pela banca com o comando abaixo:
+%
+% \includepdf{folhadeaprovacao_final.pdf}
+%
+\begin{folhadeaprovacao}
+
+
+
+	\begin{center}
+		{\fontseries{b}\selectfont\MakeTextUppercase{\normalsize\imprimirautor}}
+	\end{center}
+    \vfill
+    
+	\vfill
+	\begin{center}
+		{\fontseries{b}\selectfont\MakeTextUppercase{\imprimirtitulo}}
+	\end{center}
+	\vfill
+
+    
+\abntex@ifnotempty{\imprimirpreambulo}{%
+	\hspace{.45\textwidth}
+	{\begin{minipage}{.5\textwidth}
+			\SingleSpacing
+			\imprimirpreambulo\par
+			\vspace*{4pt}
+			{\imprimirorientadorRotulo~\imprimirorientador\par}
+			\abntex@ifnotempty{\imprimircoorientador}{%
+				{\imprimircoorientadorRotulo~\imprimircoorientador}%
+			}%
+	\end{minipage}}%
+}%
+
+
+\vfill
+        
+	\begin{center}
+		{\fontseries{b}\selectfont BANCA EXAMINADORA: }
+		\vspace*{1.75cm}
+	\end{center}
+
+	{Orientador:}
+
+	\begin{center}
+		\begin{minipage}{8.75cm}
+			\begin{flushleft}
+				\rule{8.75cm}{0.1mm}
+
+				Dr. Cristiano Damiani Vasconcellos \par
+				UDESC
+			\end{flushleft}
+		\end{minipage}
+	\end{center}
+	
+	\vspace*{\baselineskip}
+
+        {Coorientador:}
+
+	\begin{center}
+		\begin{minipage}{8.75cm}
+			\begin{flushleft}
+				\rule{8.75cm}{0.1mm}
+
+				Me. Paulo Henrique Torrens \par
+				University of Kent
+			\end{flushleft}
+		\end{minipage}
+	\end{center}
+	
+	\vspace*{\baselineskip}
+ 
+    {Membros:} 
+
+    \begin{center}
+        \begin{minipage}{8.75cm}
+            \begin{flushleft}
+                \rule{8.75cm}{0.1mm}
+    
+                Me. Gabriela Moreira \par
+                UDESC
+            \end{flushleft}
+        \end{minipage}
+    \end{center}
+
+	\vspace*{\baselineskip}
+
+    \begin{center}
+        \begin{minipage}{8.75cm}
+            \begin{flushleft}
+                \rule{8.75cm}{0.1mm}
+    
+                Dra. Karina Girardi Roggia \par
+                UDESC
+            \end{flushleft}
+        \end{minipage}
+    \end{center}
+
+    
+    \vspace*{\fill}  
+    \begin{center}
+    {\imprimirlocal, Novembro de \imprimirdata}
+	\end{center}
+    \vspace*{0.25cm}  
+\end{folhadeaprovacao}
+% ---
+
+
+
+
+%\textbf{	{Orientador: \vspace{-16pt} }
+%	\assinatura{\textbf{Prof. \imprimirorientador , Dr.} \\ Univ. XXX} 
+%	{Coorientador: \vspace{-16pt}}   
+%	\assinatura{\textbf{Prof. \imprimircoorientador , Dr.} \\ Univ. XXX}
+%	
+%	{Membros: \vspace{-16pt} } 
+%	
+%	% --- Exemplo de assinaturas em sequência ---       
+%	\setlength{\ABNTEXsignwidth}{8.5cm}
+%	
+%	\assinatura{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}
+%	\assinatura{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}
+%	\assinatura{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}
+%	
+%	% --- Exemplo de assinaturas lado a lado ---
+%	\setlength{\ABNTEXsignwidth}{7.5cm}
+	%
+	%    \noindent\hfill\assinatura*{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}%
+	%    \hfill%
+	%    \assinatura*{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}%
+	%    \hfill
+	%    
+	%    \noindent\hfill\assinatura*{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}%
+	%    \hfill%
+	%    \assinatura*{\textbf{Prof. Professor, Dr.} \\ Univ. XXX}%
+	%    \hfill}

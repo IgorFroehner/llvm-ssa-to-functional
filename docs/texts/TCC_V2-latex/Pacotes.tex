@@ -1,0 +1,489 @@
+% ----------------------------------------------------------
+% Pacotes básicos 
+% ----------------------------------------------------------
+% \usepackage{Pacotes/abntex2}
+\usepackage{amsmath, amssymb, amsfonts, amsthm, mathtools}
+\usepackage{mathptmx} 							% Usa a fonte Times New Roman	 (UDESC/CCT)
+\usepackage[T1]{fontenc}						% Seleção de códigos de fonte.
+\usepackage[utf8]{inputenc}						% Codificação do documento (conversão automática dos acentos)
+\usepackage{lastpage}							% Usado pela Ficha catalográfica
+\usepackage{indentfirst}						% Indenta o primeiro parágrafo de cada seção.
+\usepackage[dvipsnames,table]{xcolor}			% Controle das cores
+\usepackage{graphicx}							% Inclusão de gráficos
+\usepackage{microtype} 							% para melhorias de justificação
+% \usepackage{lipsum}								% para geração de dummy text
+\usepackage[brazilian,hyperpageref]{backref}	% Paginas com as citações na bibl
+\usepackage[alf,abnt-emphasize=bf,abnt-full-initials=yes]{abntex2cite}					% Citações padrão ABNT
+\usepackage{adjustbox}							% Pacote de ajuste de boxes
+\usepackage{subcaption}							% Inclusão de Subfiguras e sublegendas		
+\usepackage{enumitem}							% Personalização de listas
+\usepackage[section]{placeins}					% Manter as figuras delimitadas na respectiva seção com a opção [section]
+\usepackage{multirow}							% Multi colunas nas tabelas
+\usepackage{array,tabularx} 					% Pacotes de tabelas
+\usepackage{booktabs}							% Pacote de tabela profissional
+\usepackage{rotating}							% Rotacionar figuras e tabelas
+\usepackage{xfrac}								% Fazer frações n/d em linha
+\usepackage{bm}									% Negrito em modo matemático
+\usepackage{xstring}							% Manipulação de strings
+\usepackage{chngcntr}							% Pacte usado para deixar numeração de equações sequencial (UDESC/CCT)
+\usepackage{xspace}								% Espaçamento após comandos
+\usepackage{bussproofs}							% Provas em estilo de árvore
+\usepackage{hyperref}							% Suporte para hiperlinks
+\usepackage{listings}					% Highlighting de código Coq
+% \usepackage{llvm/lang}  % include custom language for LLVM IR.
+% \usepackage{nasm/style} % include custom style for NASM assembly.
+% \usepackage{float}	
+\lstset{
+  basicstyle=\ttfamily,
+  mathescape
+}
+\usepackage{fancyvrb}
+\usepackage{stmaryrd}
+\usepackage{minted}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definição}[section]
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\definecolor{darkgreen}{rgb}{0,0.6,0}
+\definecolor{darkorange}{rgb}{0.8,0.4,0.2}
+\definecolor{darkred}{rgb}{0.8,0,0}
+
+\counterwithout{equation}{chapter}
+% fonte: https://latex.org/forum/viewtopic.php?t=15392
+
+% Comando para deixar numeração das equações contínua (1), (2), (3)... ao invés de organizar por capítulos (1.1)(1.2)... (2.1)(2.2)
+%\renewcommand{\theequation}{\arabic{equation}}
+
+%\numberwithin{equation}{section}
+
+% Cabeçalho somente com numeração de página 10pt
+\makepagestyle{PagNumReduzida}
+\makeevenhead{PagNumReduzida}{\ABNTEXfontereduzida\thepage}{}{}
+\makeoddhead{PagNumReduzida}{}{}{\ABNTEXfontereduzida\thepage}
+%fonte: https://github.com/abntex/abntex2/wiki/HowToCustomizarCabecalhoRodape
+%fonte: Manual memoir seção 7.3 pg. 111 pdf http://linorg.usp.br/CTAN/macros/latex/contrib/memoir/memman.pdf 
+
+% Personalização das opções das listas
+\setlist[itemize]{leftmargin=\parindent}
+
+% Citação online --- MODIFICAR ---
+\newcommand{\citeshort}[1]{\citeauthoronline{#1}~(\citeyear{#1})}
+
+\newcommand{\me}[1]{Elaborado pelo autor (#1).}
+
+% Configuração do pgfplots
+% \pgfplotsset{compat=newest} %compat=1.14
+% \pgfplotsset{plot coordinates/math parser=false} 
+% \newlength\figureheight 
+% \newlength\figurewidth 
+
+% Libraries do TiKz
+% \usetikzlibrary{quotes,angles,arrows}
+% \usetikzlibrary{through,calc,math}
+% \usetikzlibrary{graphs,backgrounds,fit}
+% \usetikzlibrary{shapes,positioning,patterns,shadows}
+% \usetikzlibrary{decorations.pathreplacing}
+% \usetikzlibrary{shapes.geometric}
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{external}
+
+%\tikzexternalize[]
+%\tikzexternalenable
+%\tikzexternalize
+%\tikzexternaldisable
+%\tikzset{external/force remake}
+%\tikzexternalize[shell escape=-enable-write18]
+
+% Personalização das legendas
+\usepackage[format = plain, %hang
+			justification = centering,
+			labelsep = endash,
+			singlelinecheck = false,
+			skip = 6pt,
+			listformat = simple]{caption}	
+
+% Personalizações de tipo de colunas de tabelas
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+% Personalizações de cores da UDESC
+\definecolor{CapaAmareloUDESC}{RGB}{243,186,83}		% Especialização
+\definecolor{CapaVerdeUDESC}{RGB}{0,112,52}			% Mestrado
+\definecolor{CapaVermelhoUDESC}{RGB}{171,35,21}		% Doutorado
+\definecolor{CapaAzulUDESC}{RGB}{38,54,118} 		% Pós-Doutorado
+
+% CONFIGURAÇÕES DE PACOTES
+% Configurações do pacote backref
+% Usado sem a opção hyperpageref de backref
+\renewcommand{\backrefpagesname}{Citado na(s) página(s):~}
+% Texto padrão antes do número das páginas
+\renewcommand{\backref}{}
+% Define os textos da citação
+\renewcommand*{\backrefalt}[4]{
+	\ifcase #1 %
+	Nenhuma citação no texto.%
+	\or
+	Citado na página #2.%
+	\else
+	Citado #1 vezes nas páginas #2.%
+	\fi}%
+
+% alterando o aspecto da cor azul
+%\definecolor{blue}{RGB}{41,5,195}
+
+% informações do PDF
+\makeatletter
+\hypersetup{
+	%pagebackref=true,
+	pdftitle={\@title}, 
+	pdfauthor={\@author},
+	pdfsubject={\imprimirpreambulo},
+	pdfcreator={LaTeX with abnTeX2},
+	pdfkeywords={abnt}{latex}{abntex}{abntex2}{trabalho academico}, 
+	colorlinks=true,       		% false: boxed links; true: colored links
+	linkcolor=black,          	% color of internal links
+	citecolor=black,        	% color of links to bibliography
+	filecolor=black,      		% color of file links
+	urlcolor=black,
+	bookmarksdepth=4
+}
+\makeatother
+
+
+% \makeatletter
+% \newcommand{\includetikz}[1]{%
+% 	\tikzsetnextfilename{#1}%
+% 	\input{#1.tex}%
+% }
+% \makeatother
+
+% ---
+% Possibilita criação de Quadros e Lista de quadros.
+% Ver https://github.com/abntex/abntex2/issues/176
+%
+\newcommand{\quadroname}{Quadro}
+\newcommand{\listofquadrosname}{Lista de quadros}
+
+\newlistof{listofquadros}{loq}{\listofquadrosname}
+\newlistentry{quadro}{loq}{0}
+
+% configurações para atender às regras da ABNT
+\setfloatadjustment{quadro}{\centering}
+\counterwithout{quadro}{chapter}
+\renewcommand{\cftquadroname}{\quadroname\space} 
+\renewcommand*{\cftquadroaftersnum}{\hfill--\hfill}
+
+\setfloatlocations{quadro}{hbtp} % Ver https://github.com/abntex/abntex2/issues/176
+% ---
+
+
+% Espaçamento depois do título
+\setlength{\afterchapskip}{0.7\baselineskip}
+% O tamanho do parágrafo é dado por:
+\setlength{\parindent}{1.25cm}
+% Controle do espaçamento entre um parágrafo e outro:
+\setlength{\parskip}{0.0cm}  % tente também \onelineskip
+%\SingleSpacing % Espaçamento simples 
+\OnehalfSpacing % Espaçamento 1,5 (UDESC/CCT)
+%\DoubleSpacing	% Espaçamento duplo
+
+% ---
+% Margens - NBR 14724/2011 - 5.1 Formato
+% ---
+\setlrmarginsandblock{3cm}{2cm}{*}
+\setulmarginsandblock{3cm}{2cm}{*}
+\checkandfixthelayout[fixed]
+% ---
+
+
+% To use externalize consider
+%https://tex.stackexchange.com/questions/182783/tikzexternalize-not-compatible-with-miktex-2-9-abntex2-package
+%Lauro Cesar digged into the problem until he came with a solution for me to test. And it Works!
+%
+%According to this link:
+%
+%The package calc changed the commands \setcounter and friends to be fragile. 
+% So you have to make them robust. The example below uses etoolbox with \robustify:
+%
+\usepackage{etoolbox}
+\robustify\setcounter
+\robustify\addtocounter
+\robustify\setlength
+\robustify\addtolength
+
+
+%% How to silence memoir class warning against the use of caption package?
+%% https://tex.stackexchange.com/questions/391993/how-to-silence-memoir-class-warning-against-the-use-of-caption-package
+%\usepackage{silence}
+%\WarningFilter*{memoir}{You are using the caption package with the memoir class}
+%\WarningFilter*{Class memoir Warning}{You are using the caption package with the memoir class}
+
+% --------------------------------------------------------
+% INICIO DAS CUSTOMIZACOES PARA A UDESC
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% Fontes padroes de part, chapter, section, subsection e subsubsection
+% --------------------------------------------------------
+% --- Chapter ---
+\renewcommand{\ABNTEXchapterfont}{\fontseries{b}} %\bfseries
+\renewcommand{\ABNTEXchapterfontsize}{\normalsize}
+% --- Part ---
+\renewcommand{\ABNTEXpartfont}{\ABNTEXchapterfont}
+\renewcommand{\ABNTEXpartfontsize}{\LARGE}
+% --- Section ---
+\renewcommand{\ABNTEXsectionfont}{\normalfont}
+\renewcommand{\ABNTEXsectionfontsize}{\normalsize}
+% --- SubSection ---
+\renewcommand{\ABNTEXsubsectionfont}{\fontseries{b}} %\bfseries
+\renewcommand{\ABNTEXsubsectionfontsize}{\normalsize}
+% --- SubSubSection ---
+\renewcommand{\ABNTEXsubsubsectionfont}{\itshape}
+\renewcommand{\ABNTEXsubsubsectionfontsize}{\normalsize}
+
+\renewcommand{\ABNTEXsubsubsubsectionfont}{\normalfont}
+\renewcommand{\ABNTEXsubsubsubsectionfontsize}{\normalsize}
+% ---
+
+% --------------------------------------------------------
+% Fontes das entradas do sumario
+% --------------------------------------------------------
+
+\renewcommand{\cftpartfont}{\ABNTEXpartfont\selectfont}
+\renewcommand{\cftpartpagefont}{\normalsize\selectfont}
+
+\renewcommand{\cftchapterfont}{\ABNTEXchapterfont\selectfont}
+\renewcommand{\cftchapterpagefont}{\normalsize\selectfont}
+
+\renewcommand{\cftsectionfont}{\ABNTEXsectionfont\selectfont}
+\renewcommand{\cftsectionpagefont}{\normalsize\selectfont}
+
+\renewcommand{\cftsubsectionfont}{\ABNTEXsubsectionfont\selectfont}
+\renewcommand{\cftsubsectionpagefont}{\normalsize\selectfont}
+
+\renewcommand{\cftsubsubsectionfont}{\normalfont\itshape\selectfont}
+\renewcommand{\cftsubsubsectionpagefont}{\normalsize\selectfont}
+
+\renewcommand{\cftparagraphfont}{\normalfont\selectfont}
+\renewcommand{\cftparagraphpagefont}{\normalsize\selectfont}
+
+% --------------------------------------------------------
+% Usando os pacotes hyperref, uppercase... 
+% Para deixar a section do toc uppercase precisa de:
+% --------------------------------------------------------
+\usepackage{textcase}
+
+\makeatletter
+
+\let\oldcontentsline\contentsline
+\def\contentsline#1#2{%
+	\expandafter\ifx\csname l@#1\endcsname\l@section
+	\expandafter\@firstoftwo
+	\else
+	\expandafter\@secondoftwo
+	\fi
+	{%
+		\oldcontentsline{#1}{\MakeTextUppercase{#2}}%
+	}{%
+		\oldcontentsline{#1}{#2}%
+	}%
+}
+\makeatother
+
+% --------------------------------------------------------
+% Renomenando as entradas de APÊNDICES E ANEXOS
+% --------------------------------------------------------
+
+\renewcommand{\apendicesname}{AP\^ENDICES}
+\renewcommand{\anexosname}{ANEXOS}
+
+
+% Manipulação de Strings
+%\RequirePackage{xstring}
+
+% Comando para inverter sobrenome e nome
+\newcommand{\invertname}[1]{%
+	\StrBehind{#1}{{}}, \StrBefore{#1}{{}}%
+}%
+
+
+% --------------------------------------------------------
+% Alterando os estilos de Caption e Fonte
+% --------------------------------------------------------
+\makeatletter
+% Define o comando \fonte que respeita as configurações de caption do memoir ou do caption
+\renewcommand{\fonte}[2][\fontename]{%
+	\M@gettitle{#2}%
+	\memlegendinfo{#2}%
+	\par
+	\begingroup
+	\@parboxrestore
+	\if@minipage
+	\@setminipage
+	\fi
+	\ABNTEXfontereduzida
+	\configureseparator
+	\captiondelim{\ABNTEXcaptionfontedelim}
+	\@makecaption{#1}{\ignorespaces #2}\par
+	\endgroup}
+
+
+\captionstyle[\raggedright]{\raggedright}
+
+\makeatother
+
+\setlength{\cftbeforechapterskip}{0pt plus 0pt}
+\renewcommand*{\insertchapterspace}{}
+
+\newlength{\mylen}	% New length to use with spacing
+\setlength{\mylen}{1pt}
+
+\setlength{\cftbeforechapterskip}{\mylen}
+\setlength{\cftbeforesectionskip}{\mylen}
+\setlength{\cftbeforesubsectionskip}{\mylen}
+\setlength{\cftbeforesubsubsectionskip}{\mylen}
+\setlength{\cftbeforesubsubsubsectionskip}{\mylen}
+
+
+% ---
+% Ajuste das listas de abreviaturas e siglas ; e símbolos [Personalizada para UDESC com espaçamento 1,5]
+% ---
+
+% ---
+% Redefinição da Lista de abreviaturas e siglas [Personalizada para UDESC com espaçamento 1,5]
+\renewenvironment{siglas}{%
+	\pretextualchapter{\listadesiglasname}
+	\begin{symbols} 
+		\setlength{\itemsep}{0pt}	% Ajuste para Espaçamento 1,5 (UDESC/CCT)
+	}{% 
+	\end{symbols}
+	\cleardoublepage
+}
+% ---
+
+% ---
+% Redefinição da Lista de símbolos [Personalizada para UDESC com espaçamento 1,5]
+\renewenvironment{simbolos}{%
+	\pretextualchapter{\listadesimbolosname}
+	\begin{symbols}
+		\setlength{\itemsep}{0pt}	% Ajuste para Espaçamento 1,5 (UDESC/CCT)
+	}{%
+	\end{symbols}
+	\cleardoublepage
+}
+% ---
+
+\usepackage{xcolor}
+\usepackage{textcomp}
+
+% TODO: Add support for digits.
+%\definecolor{digits}{RGB}{0,0,128} % dark blue
+
+\definecolor{comment}{RGB}{0,128,0}     % dark green
+\definecolor{string}{RGB}{255,0,0}      % red
+\definecolor{instruction}{RGB}{0,0,255} % blue
+\definecolor{directive}{RGB}{128,0,128} % purple
+\definecolor{register}{RGB}{128,0,0}    % dark red
+\definecolor{darker}{RGB}{0, 0, 0}
+
+\lstdefinestyle{nasm}{
+	commentstyle=\color{comment},
+	stringstyle=\color{string},
+	keywordstyle=\color{instruction},
+	keywordstyle=[2]\color{directive},
+	keywordstyle=[3]\color{register},
+	basicstyle=\footnotesize\ttfamily,
+	% numbers=left,
+	numberstyle=\tiny,
+	numbersep=5pt,
+	frame=none,
+	breaklines=true,
+	prebreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+	showstringspaces=false,
+	upquote=true,
+	tabsize=8,
+}
+
+\lstdefinestyle{asdf}{
+	keywordstyle=\bfseries,
+	basicstyle=\footnotesize\ttfamily,
+	% numbers=left,
+	numberstyle=\tiny,
+	numbersep=5pt,
+	frame=none,
+	breaklines=true,
+	prebreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+	showstringspaces=false,
+	upquote=true,
+	tabsize=8,
+}
+
+\lstdefinelanguage{mygramar}{
+        sensitive=true,
+	alsoletter={\%},
+	keywords=[1]{def},
+}
+
+\lstdefinelanguage{llvm}{
+	sensitive=true,
+	alsoletter={\%},
+	% comments.
+	%    ; line comment
+	comment=[l]{;},
+	% strings.
+	%    "foo"
+	string=[b]{"},
+	% instructions.
+	%    ref: http://llvm.org/docs/LangRef.html#instruction-reference
+	keywords=[1]{
+add, addrspacecast, alloca, and, ashr, atomicrmw, bitcast, br, call, cmpxchg,
+extractelement, extractvalue, fadd, fcmp, fdiv, fence, fmul, fpext, fptosi,
+fptoui, fptrunc, frem, fsub, getelementptr, icmp, indirectbr, insertelement,
+insertvalue, inttoptr, invoke, landingpad, load, lshr, mul, or, phi, ptrtoint,
+resume, ret, sdiv, select, sext, shl, shufflevector, sitofp, srem, store, sub,
+switch, to, trunc, udiv, uitofp, unreachable, urem, va_arg, xor, zext
+	},
+	% directives.
+	%    ref: http://llvm.org/docs/LangRef.html
+	keywords=[2]{
+acq_rel, acquire, addrspace, alias, align, alignstack, alwaysinline, any,
+anyregcc, appending, arcp, arm_aapcs_vfpcc, arm_aapcscc, arm_apcscc, asm,
+atomic, attributes, available_externally, blockaddress, builtin, byval, c,
+catch, cc, ccc, cleanup, cold, coldcc, comdat, common, constant, datalayout,
+declare, default, define, dereferenceable, dllexport, dllimport, eq, exact,
+exactmatch, extern_weak, external, externally_initialized, false, fast, fastcc,
+filter, gc, ghccc, global, hidden, inalloca, inbounds, initialexec, inlinehint,
+inreg, intel_ocl_bicc, inteldialect, internal, jumptable, largest, linkonce,
+linkonce_odr, localdynamic, localexec, max, min, minsize, module, monotonic,
+msp430_intrcc, musttail, naked, nand, ne, nest, ninf, nnan, noalias, nobuiltin,
+nocapture, noduplicate, noduplicates, noimplicitfloat, noinline, nonlazybind,
+nonnull, noredzone, noreturn, nounwind, nsw, nsz, null, nuw, oeq, oge, ogt, ole,
+olt, one, opaque, optnone, optsize, ord, personality, prefix, preserve_allcc,
+preserve_mostcc, private, prologue, protected, ptx_device, ptx_kernel, readnone,
+readonly, release, returned, returns_twice, samesize, sanitize_address,
+sanitize_memory, sanitize_thread, section, seq_cst, sge, sgt, sideeffect,
+signext, singlethread, sle, slt, spir_func, spir_kernel, sret, ssp, sspreq,
+sspstrong, tail, target, thread_local, triple, true, type, ueq, uge, ugt, ule,
+ult, umax, umin, undef, une, unnamed_addr, uno, unordered, unwind, uselistorder,
+uselistorder_bb, uwtable, volatile, weak, weak_odr, webkit_jscc, x,
+x86_64_sysvcc, x86_64_win64cc, x86_fastcallcc, x86_stdcallcc, x86_thiscallcc,
+x86_vectorcallcc, xchg, zeroext, zeroinitializer
+	},
+	% types.
+	%    ref: http://llvm.org/docs/LangRef.html#type-system
+	keywords=[3]{
+i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18,
+i19, i20, i21, i22, i23, i24, i25, i26, i27, i28, i29, i30, i31, i32, i33, i34,
+i35, i36, i37, i38, i39, i40, i41, i42, i43, i44, i45, i46, i47, i48, i49, i50,
+i51, i52, i53, i54, i55, i56, i57, i58, i59, i60, i61, i62, i63, i64, i80, i512,
+void, half, float, double, fp128, x86_fp80, ppc_fp128, x86_mmx, label, metadata
+	},
+}
+
+% ---
+% FIM DAS CUSTOMIZAÇÕES PARA A  Universidade do Estado de Santa Catarina - UDESC/CCT
+% ---

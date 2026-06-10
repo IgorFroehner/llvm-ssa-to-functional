@@ -1,0 +1,106 @@
+
+% ---
+% Inserir a ficha bibliografica
+% ---
+
+% Isto é um exemplo de Ficha Catalográfica, ou ``Dados internacionais de
+% catalogação-na-publicação''. Você pode utilizar este modelo como referência. 
+% Porém, provavelmente a biblioteca da sua universidade lhe fornecerá um PDF
+% com a ficha catalográfica definitiva após a defesa do trabalho. Quando estiver
+% com o documento, salve-o como PDF no diretório do seu projeto e substitua todo
+% o conteúdo de implementação deste arquivo pelo comando abaixo:
+
+
+
+% \begin{fichacatalografica}
+%     \includepdf{fig_ficha_catalografica.pdf}
+% \end{fichacatalografica}
+
+
+%	\setlength{\parindent}{0cm}
+%	\setlength{\parskip}{0pt}
+\begin{fichacatalografica}
+	%\sffamily
+	%\rmfamily
+	\ttfamily \hbadness=10000
+	\vspace*{\fill}					% Posição vertical
+	\begin{center}					% Minipage Centralizado
+	Para gerar a ficha catalográfica de teses e \\ 
+	dissertações acessar o link:  \\
+	https://www.udesc.br/bu/manuais/ficha
+	
+	\vspace*{8pt}
+	
+%	\begin{minipage}[c]{8cm}
+%	\centering \sffamily
+%	 Ficha catalográfica elaborada pelo(a) autor(a), com auxílio do programa de geração automática da Biblioteca Setorial do CCT/UDESC
+%	\end{minipage}
+	\fbox{\begin{minipage}[c]{12.5cm}		% Largura
+	\flushright
+	{\begin{minipage}[c]{10.5cm}		% Largura
+	\vspace{1.25cm}
+	%\footnotesize
+	\setlength{\parindent}{1.5em}
+	\noindent \invertname{\imprimirautor} \par
+	\imprimirtitulo{ }/{ }\imprimirautor. -- \imprimirlocal, \imprimirdata .\par
+	\pageref{LastPage} p. : il. ; 30 cm.\par
+	\vspace{1.5em}
+	\imprimirorientadorRotulo~\imprimirorientador.\par
+	\imprimircoorientadorRotulo~\imprimircoorientador.\par
+	\imprimirtipotrabalho~--~\imprimirinstituicao, \imprimirlocal, \imprimirdata.\par
+	\vspace{1.5em}
+		1. Palavra-chave.
+		2. Palavra-chave.
+		3. Palavra-chave.
+ 		4. Palavra-chave.
+		5. Palavra-chave.
+		I. \invertname{\imprimirorientador}.
+		II. \invertname{\imprimircoorientador}.
+		III. \imprimirinstituicao.
+		IV. Título. %
+	\vspace{1.25cm}	%		
+	\end{minipage}%
+	}% 
+	\end{minipage}}%
+	
+	\vspace*{0.5cm}
+	
+	\end{center}
+\end{fichacatalografica}
+
+
+%\begin{fichacatalografica}
+%	\sffamily
+%	\vspace*{\fill}					% Posição vertical
+%	\begin{center}					% Minipage Centralizado
+%	\fbox{\begin{minipage}[c][8cm]{13.5cm}		% Largura
+%	\small
+%	\imprimirautor
+%	%Sobrenome, Nome do autor
+%	
+%	\hspace{0.5cm} \imprimirtitulo  / \imprimirautor. --
+%	\imprimirlocal, \imprimirdata-
+%	
+%	\hspace{0.5cm} \pageref{LastPage} p. : il. (algumas color.) ; 30 cm.\\
+%	
+%	\hspace{0.5cm} \imprimirorientadorRotulo~\imprimirorientador\\
+%	
+%	\hspace{0.5cm}
+%	\parbox[t]{\textwidth}{\imprimirtipotrabalho~--~\imprimirinstituicao,
+%	\imprimirdata.}\\
+%	
+%	\hspace{0.5cm}
+%		1. Palavra-chave1.
+%		2. Palavra-chave2.
+%		3. Palavra-chave3.
+% 		4. Palavra-chave4.
+%		5. Palavra-chave5.
+%		I. Orientador.
+%		II. Universidade xxx.
+%		III. Faculdade de xxx.
+%		IV. Título 			
+%	\end{minipage}}
+%	\end{center}
+%\end{fichacatalografica}
+% ---
+

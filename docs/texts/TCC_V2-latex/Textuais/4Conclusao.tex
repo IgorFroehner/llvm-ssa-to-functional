@@ -1,0 +1,22 @@
+
+\chapter{Conclusão}\label{cap:conclusao}
+
+Há diversos desafios e problemas a serem superados na área de compiladores. As representações intermediárias têm um papel importante ao permitir algoritmos de otimizações de código eficientes. Uma vez que compiladores têm se voltado cada vez mais para modelos modulares, as representações intermediárias têm sido usadas para promover a integração entre os módulos dos compiladores e a eficiência dos algoritmos de otimização.
+
+A forma SSA favorece diversas otimizações de código quanto ao fluxo de dados e de controle em compiladores de linguagens imperativas. Isso segue dos fatos que SSA tem uma representação em grafo de fluxo de controle, limita que cada variável seja definida somente uma vez e define a notação conceitual da função $\phi$, de forma que o fluxo de dados fica explícito aos algoritmos de otimização. Tendo sua evidência quanto à otimização de programas, SSA é usada para fundamentar a representação intermediária da LLVM, a LLVM-IR.
+
+A LLVM é o \emph{framework} de compilação de código que está no estado da arte atualmente. É utilizada no \emph{clang} para as linguagens C e C++, na construção do compilador do Rust, e encontra aplicações na compilação ou interpretação de linguagens como Java, Python, Ruby, TypeScript, entre outras. A LLVM se destaca por oferecer um \emph{backend} de compilação robusto, oferecendo uma ampla gama de otimizações com uma interface que é ao mesmo tempo acessível e transparente, facilitando o desenvolvimento e a implementação de novos compiladores.
+
+Tendo em vista o fatos de que SSA é correspondente a programação funcional \cite{kelsey1995correspondence} e ANF \cite{ssaToAnf}, e que a LLVM fundamenta sua representação intermediária em SSA, esse trabalho buscou explorar a tradução entre código em LLVM-IR na forma SSA, para ANF em Haskell. Para isso, foi definido um subconjunto da LLVM-IR, e foi desenvolvida uma tradução adaptada do método descrito por \citeonline{ssaToAnf}. 
+
+A partir da pesquisa feita, foi possível estabelecer uma tradução de funções puras com tipos inteiros simples da LLVM-IR para representação funcional em ANF na linguagem Haskell. Portanto, a principal ressalva levantada nesse trabalho é que o tratamento de efeitos colaterais nessa tradução necessita do desenvolvimento de uma extensão do método proposto.
+
+A implementação do método de tradução proposto foi feita na linguagem Haskell, foram utilizadas bibliotecas como Alex\footnote{https://hackage.haskell.org/package/alex} para análise léxica, Happy\footnote{https://hackage.haskell.org/package/happy} para análise sintática e FGL\footnote{https://hackage.haskell.org/package/fgl} (\emph{Functional Graph Library}) para grafos. No programa desenvolvido há opções para gerar representações gráficas do grafo de fluxo de controle e da árvore de dominância, o que pode facilitar o entendimento da saída das traduções. O código implementado está disponível em um repositório aberto no GitHub\footnote{https://github.com/IgorFroehner/llvm-ssa-to-functional}.
+
+\section{Trabalhos Futuros}
+
+Há algumas oportunidades de pesquisas que podem ser exploradas em trabalhos futuros com base no resultado obtido. Um caminho inicial seria aumentar a gama de tipos nativos e instruções da LLVM que são aceitos na interpretação, mas ainda mantendo a característica de tradução limitada a funções puras. O que ajudaria mais à frente a compreender se a tradução proposta é adequada para um subconjunto maior da LLVM-IR, ou como esse método precisaria ser estendido.
+
+Conforme comentado durante a explicação da proposta do trabalho, \citeonline{rigon2020inferring} exploraram a correspondência entre SSA e ANF e puderam inferir tipos e efeitos em uma linguagem pseudo-imperativa. Com o resultado do presente trabalho é possível futuramente investigar a inferência de tipos e efeitos sobre código em LLVM-IR, ou seja, código gerado a partir de linguagens imperativas como C, C++ ou Rust. Ou ainda, quanto ao tratamento de efeitos colaterais, há a possibilidade de estudar o desenvolvimento de uma tradução estática para a metalinguagem monádica de \citeonline{moggi1988computational}.
+
+Além disso, a justificativa do presente trabalho se fundamentou no fato de que as representações intermediárias, ANF e SSA, tornam mais eficazes alguns algoritmos de otimização de código. Outra pesquisa futura possível seria buscar aplicar os códigos de saída deste trabalho a algoritmos de otimização presentes na literatura e validar se benefícios seriam atingidos.

@@ -1,0 +1,11 @@
+% ---
+% RESUMOS
+% ---
+
+% resumo em português
+\setlength{\absparsep}{18pt} % ajusta o espaçamento dos parágrafos do resumo
+\begin{resumo}
+    Durante o processo de tradução de código em uma linguagem fonte para código de máquina, compiladores usam diversas representações intermediárias (IRs - \emph{Intermediate Representations}) para auxiliar na análise e tradução do código \cite{dragao}. A forma de atribuição única estática (SSA - \emph{Static Single-Assignment}) é uma forma de representação intermediária que facilita e torna mais eficientes diversos algoritmos de otimização de código, principalmente quanto ao fluxo de dados dos programas, e é utilizada por diversas ferramentas como GCC e LLVM \cite{muchnick1997advanced}. A LLVM (\emph{Low Level Virtual Machine}) fundamenta a definição de sua representação intermediária (LLVM-IR) na forma SSA. \citeonline{appel1998ssa} demonstrou que há uma correspondência entre a forma de atribuição única estática e o paradigma de programação funcional, trazendo um algoritmo que faz a tradução estaticamente entre ambas. De maneira mais formal, \citeonline{ssaToAnf} definem um algoritmo que faz a tradução estaticamente entre SSA e uma representação intermediária que por sua vez é utilizada em compiladores de linguagens funcionais, ANF (\emph{Administrative Normal Form}). A partir dos fatos que SSA e programação funcional na forma ANF são equivalentes, e que a LLVM fundamenta sua representação funcional em SSA, o presente trabalho buscou explorar a possibilidade de tradução da LLVM-IR para código puramente funcional em Haskell na forma ANF. Para isto foi necessário definir um subconjunto da LLVM-IR, implementar um \emph{parser} e um tradutor. No subconjunto traduzido não são permitidos efeitos colaterais, ou seja, as funções traduzidas devem ser puras, e o \emph{parser} somente aceita tipos inteiros simples (sem arrays, ponteiros, ou tipos compostos). O tradutor desenvolvido dá como saída código em Haskell em ANF que é compilável no GHC.
+
+ \textbf{Palavras-chave}: Compiladores, Representações Intermediárias, Programação Funcional, SSA, ANF.
+\end{resumo}

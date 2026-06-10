@@ -1,0 +1,230 @@
+\documentclass[
+	12pt,					% tamanho da fonte
+	openright,				% capítulos começam em pág ímpar (insere página vazia caso preciso)
+	oneside,				% para impressão em recto e verso (twoside). Oposto a (oneside)
+	a4paper,				% tamanho do papel. 
+	chapter=TITLE,			% títulos de capítulos convertidos em letras maiúsculas
+	section=TITLE,			% títulos de seções convertidos em letras maiúsculas
+	sumario=abnt-6027-2012,
+	english,				% idioma adicional para hifenização
+	brazil,					% o último idioma é o principal do documento
+	fleqn,					% equações alinhadas a esquerda (UDESC/CCT)+
+	]{abntex2}
+
+\input{Pacotes}	% Inclui pacotes básicos 
+
+\graphicspath{{Texto/Figuras/}}
+\renewcommand{\orientadorname}{Orientador:}
+% O pacote bm torna a fonte do mathcal feia, a linha abaixo desfaz isso
+\DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}
+
+% -----------------------------------------------------------------
+% Informações de dados para CAPA e FOLHA DE ROSTO
+% -----------------------------------------------------------------
+\titulo{Tradução da Forma SSA Gerada pela LLVM para código funcional}%
+
+\autor{Igor Schiessl {}Froehner}%
+\orientador{Cristiano Damiani  {}Vasconcellos}%
+\coorientador{Paulo Henrique {}Torrens}%
+
+\instituicao{Universidade do Estado de Santa Catarina, Centro de Ciências Tecnológicas, Bacharelado em Ciência da Computação}%
+
+\tipotrabalho{Trabalho de Conclusão de Curso}
+
+\preambulo{Trabalho de conclusão de curso submetido à Universidade do Estado de Santa Catarina
+como parte dos requisitos para a obtenção do grau de Bacharel em Ciência da Computação}
+
+\local{Joinville}%
+
+\data{\the\year}%
+
+\makeindex
+
+% -----------------------------------------------------------------
+% Início do documento
+% -----------------------------------------------------------------
+\begin{document}
+
+\selectlanguage{brazil}
+
+% Teoremas e Provas
+
+% Estilo padrão, i.e., texto itálico
+\newtheorem{teorema}   {Teorema}
+\newtheorem{proposicao}{Proposição}
+\newtheorem{lema}      {Lema}
+\newtheorem{corolario} {Corolário}
+\renewcommand{\proofname}{Prova}
+\renewcommand\qedsymbol{$\blacksquare$}
+
+% Estilo simples, i.e., texto normal
+\theoremstyle{definition}
+\newtheorem{definicao}{Definição}
+\newtheorem{exemplo}  {Exemplo}
+
+\AtEndEnvironment{teorema}{\qed}%
+\AtEndEnvironment{definicao}{\qed}%
+\AtEndEnvironment{exemplo}  {\qed}%
+
+%% Grego
+\newcommand{\uglyphi}{\phi} % mantendo o \phi velho
+\renewcommand \phi{\varphi}
+
+% Grego Minúsculo
+\newcommand{\PHI}{\(\phi\)\xspace}
+\newcommand{\PSI}{\(\psi\)\xspace}
+\newcommand{\PI}{\(\pi\)\xspace}
+\newcommand{\OPI}{\(\overline{\pi}\)\xspace}
+\newcommand{\mOPI}{\overline{\pi}\xspace}
+\newcommand{\ALPHA}{\(\alpha\)\xspace}
+\newcommand{\BETA}{\(\beta\)\xspace}
+\newcommand{\DELTA}{\(\delta\)\xspace}
+
+% Grego Maiúsculo
+\newcommand{\GAMMA}{\(\Gamma\)\xspace}
+\newcommand{\DDELTA}{\(\Delta\)\xspace}
+\newcommand{\SIGMA}{\(\Sigma\)\xspace}
+\newcommand{\THETA}{\(\Theta\)\xspace}
+\newcommand{\LAMBDA}{\(\Lambda\)\xspace}
+\newcommand{\LAMBDAlm}{\(\Lambda_{LM}\)\xspace}
+
+% Modalidades e símbolos matemáticos
+\let \emptyset \varnothing
+\newcommand{\BOX}{\(\Box\)\xspace}
+\newcommand{\BOXi}[1]{\(\Box_{#1}\)\xspace}
+\newcommand{\DIA}{\(\Diamond\)\xspace}
+\newcommand{\DIAi}[1]{\(\Diamond_{#1}\)\xspace}
+
+\newcommand{\VVDASH}{\(\Vdash\)\xspace}
+\newcommand{\VDDASH}{\(\vDash\)\xspace}
+\newcommand{\VDASH}{\(\vdash\)\xspace}
+
+\newcommand{\ODOT}{\(\odot\)\xspace}
+\newcommand{\OPLUS}{\(\oplus\)\xspace}
+\newcommand{\OTIMES}{\(\otimes\)\xspace}
+\newcommand{\OMINUS}{\(\ominus\)\xspace}
+
+\newcommand{\eqdef}{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily def}}}{=}}}
+
+% Fontes
+\newcommand{\Mathcal}[1]{\(\mathcal{#1}\)\xspace}
+\newcommand{\Mathcali}[2]{\(\mathcal{#1}_{#2}\)\xspace}
+\newcommand{\MathcalI}[2]{\(\mathcal{#1}^{#2}\)\xspace}
+\newcommand{\Mathcalii}[3]{\(\mathcal{#1}{#2}_{#3}\)\xspace}
+
+\newcommand{\Mathfrak}[1]{\(\mathfrak{#1}\)\xspace}
+\newcommand{\Mathfraki}[2]{\(\mathfrak{#1}_{#2}\)\xspace}
+\newcommand{\MathfrakI}[2]{\(\mathfrak{#1}^{#2}\)\xspace}
+
+\newcommand{\Mathbb}[1]{\(\mathbb{#1}\)\xspace}
+\newcommand{\Mathbbi}[2]{\(\mathbb{#1}_{#2}\)\xspace}
+\newcommand{\MathbbI}[2]{\(\mathbb{#1}{#2}\)\xspace}
+
+% Comentários
+\newcommand{\miguel}[1]{\textcolor{violet}{\textbf{MIGUEL:} #1}}
+\newcommand{\ignore}[1]{\textcolor{blue}{\textbf{IGNOREM:} #1}}
+\newcommand{\kaqui}[1]{\textcolor{magenta}{\textbf{KAQUI:} #1}}
+\newcommand{\paulo}[1]{\textcolor{WildStrawberry}{\textbf{PAULO:} #1}}
+
+% Outros
+\newcommand{\linguagem}[1]{\(LM_{#1}\)\xspace}
+\newcommand{\Linguagem}[1]{LM_{#1}\xspace}
+
+\newcommand{\Odot}  {\mathbin{\odot}}
+\newcommand{\Oplus} {\mathbin{\oplus}}
+\newcommand{\Otimes}{\mathbin{\otimes}}
+
+\newcommand{\Ltac}{\Mathcal{L}\unskip tac}
+\newcommand{\CalcLambda}{Cálculo-\(\lambda\)\xspace}
+\newcommand{\CalcsLambda}{Cálculos-\(\lambda\)\xspace}
+\newcommand{\SisT}{\(\textbf{KT} \Odot \textbf{K4}\)\xspace}
+
+\newcommand{\PIMODELOS}{\PI-Modelos\xspace}
+\newcommand{\PIMODELO} {\PI-Modelo\xspace}
+\newcommand{\PImodelos}{\PI-modelos\xspace}
+\newcommand{\PImodelo} {\PI-modelo\xspace}
+
+\newcommand{\PIFRAMES}{\PI-Frames\xspace}
+\newcommand{\PIFRAME} {\PI-Frame\xspace}
+\newcommand{\PIframes}{\PI-frames\xspace}
+\newcommand{\PIframe} {\PI-frame\xspace}
+
+\newcommand{\OPIMODELOS}{\OPI-Modelos\xspace}
+\newcommand{\OPIMODELO} {\OPI-Modelo\xspace}
+\newcommand{\OPImodelos}{\OPI-modelos\xspace}
+\newcommand{\OPImodelo} {\OPI-modelo\xspace}
+
+\newcommand{\OPIFRAMES}{\OPI-Frames\xspace}
+\newcommand{\OPIFRAME} {\OPI-Frame\xspace}
+\newcommand{\OPIframes}{\OPI-frames\xspace}
+\newcommand{\OPIframe} {\OPI-frame\xspace}
+
+\newcommand{\Modeloinicial}{\Mathcali{M}{\mathcal{I}}\xspace}
+\newcommand{\modeloinicial}{\mathcal{M}_{\mathcal{I}}\xspace}
+\newcommand{\Mundoinicial}{\textit{w}\textsubscript{\Mathcal{I}}\xspace}
+\newcommand{\mundoinicial}{w_{\mathcal{I}}\xspace}
+
+\newcommand{\igor}[1]{\textcolor{blue}{\textbf{IGOR:} #1}}
+
+\frenchspacing
+
+% -----------------------------------------------------------------
+% ELEMENTOS PRÉ-TEXTUAIS
+% -----------------------------------------------------------------
+\pretextual
+
+% Você pode comentar os elementos que não deseja em seu trabalho;
+
+% A capa pode ser escolhida dentro do arquivo Capa.tex (TCC, Master, Doc, ...)
+\include{PreTextuais/Capa}					% Elemento Obrigatório
+\include{PreTextuais/FolhadeRosto}			% Elemento Obrigatório
+% Caso não utilize a Ficha Catalográfica entre na folha de rosto e retire o * de dentro do arquivo Folha de Rosto
+% \include{PreTextuais/FichaCatalografica}	% Elemento Obrigatório (Verso da Folha)
+% \include{PreTextuais/Errata}				% Elemento Opcional
+\include{PreTextuais/FolhadeAprovacao}		% Elemento Obrigatório
+\include{PreTextuais/Dedicatoria}			% Elemento Opcional
+\include{PreTextuais/Agradecimentos}		% Elemento Opcional
+% TODO: Descomentar agradecimentos antes da entrega final
+\include{PreTextuais/Epigrafe}				% Elemento Opcional
+\include{PreTextuais/Resumo}				% Elemento Obrigatório
+\include{PreTextuais/Abstract}				% Elemento Obrigatório
+\include{PreTextuais/Listas}				% Elemento Opcional
+\include{PreTextuais/Sumario}				% Elemento Obrigatório
+
+% -----------------------------------------------------------------
+% ELEMENTOS TEXTUAIS
+% -----------------------------------------------------------------
+\textual
+
+\pagestyle{PagNumReduzida}						% Comando para cabeçalho somente com numeração de página 10pt
+\aliaspagestyle{chapter}{PagNumReduzida}		% Deixar numeração da primeira página com tamanho igual ao resto da numeração
+% ref.: https://groups.google.com/g/abntex2/c/CP7g8ZMgi-c/m/KjfEnn5b9a4J
+
+
+% ---- Mantenha está estrutura, assim você deixa o trabalho mais organizado -------
+
+\include{Textuais/1Introducao}
+\include{Textuais/2FundamentacaoTeorica}
+\include{Textuais/3Desenvolvimento}
+\include{Textuais/4Conclusao}
+
+% -----------------------------------------------------------------
+% ELEMENTOS PÓS-TEXTUAIS
+% -----------------------------------------------------------------
+\postextual
+
+% Você pode comentar os elementos que não deseja em seu trabalho;
+
+% Referências bibliográficas
+\bibliography{Referencias}	% Elemento Obrigatório
+
+%\include{PosTextuais/Glossario}			% Elemento Opcional
+%\include{PosTextuais/Apendices}			% Elemento Opcional
+%\include{PosTextuais/Anexos}				% Elemento Opcional
+%\include{PosTextuais/IndiceRemissivo}		% Elemento Opcional
+
+\end{document}
+
+% -----------------------------------------------------------------
+% Fim do Documento
+% -----------------------------------------------------------------	
