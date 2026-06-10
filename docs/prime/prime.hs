@@ -18,7 +18,7 @@ is_prime a0 =
                 a12 = if a11 > a0 then 1 else 0
                 a13 () =
                   let
-                    a14 = a0 `mod` a10
+                    a14 = a0 `rem` a10
                     a15 = if a14 == 0 then 1 else 0
                   in if a15 /= 0
                     then a16 a12
@@ -39,4 +39,5 @@ is_prime a0 =
       in if a2 /= 0
         then a19 0
         else a3 ()
-  in a1 ()
+  in a1  ()
+

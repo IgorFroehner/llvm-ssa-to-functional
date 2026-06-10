@@ -9,7 +9,7 @@ euclides_gcd a0 a1 =
             a6 = if a5 == 0 then 1 else 0
             a7 () =
               let
-                a8 = a4 `mod` a5
+                a8 = a4 `rem` a5
               in a3 a5 a8
             a9 () =
               let
@@ -19,3 +19,4 @@ euclides_gcd a0 a1 =
             else a7 ()
       in a3 a0 a1
   in a2  ()
+
