@@ -17,8 +17,9 @@ The translation is intentionally restricted to a **subset of LLVM-IR**:
   are lexed/declared but not translated).
 - **All registers and blocks must be named, except the entry block** — its label
   is optional (LLVM omits it for single-block functions). The `initialStatementsBlock`
-  production in `Parser.y` parses an unlabeled entry and synthesizes the label
-  `"entryblock"` (collision-safe, since `normalizeName` always prefixes `a`).
+  production in `Parser.y` parses an unlabeled entry; `relabelEntry`/`entryBlockName`
+  then give it its *real* implicit LLVM number (= the count of implicitly-numbered
+  arguments), so φ-nodes that reference the entry by that number resolve correctly.
 
 ## Commands
 

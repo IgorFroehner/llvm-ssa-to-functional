@@ -7,6 +7,8 @@ import Data.ByteString.Lazy.Char8 (ByteString)
 import Data.Maybe (fromJust)
 import Data.Monoid (First (..))
 
+import Data.Char (isDigit)
+
 import qualified Lexer as L
 import Ast
 import NameNormalizer
@@ -74,7 +76,7 @@ functions :: { [Function L.Range] }
 
 -- Funciton Definitions
 funcDef :: { Function L.Range }
-  : define typeAnotation gname '(' arguments ')' '{' functionStatementBlocks '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) $2 $3 $5 $8 }
+  : define typeAnotation gname '(' arguments ')' '{' functionStatementBlocks '}' { FunctionDef (L.rtRange $1 <-> L.rtRange $9) $2 $3 $5 (relabelEntry $5 $8) }
 
 -- funcDec :: { Function L.Range }
 --   : declare typeAnotation gname '(' arguments ')' { FunctionDec (L.rtRange $1 <-> L.rtRange $6) $2 $3 $5 }
@@ -106,11 +108,12 @@ blockLabel :: { Name L.Range }
   : basicblock { unTok $1 (\range (L.BasicBlock label) -> LName range (normalizeName label)) }
 
 -- An unlabeled entry block (LLVM omits the entry label when clang emits IR).
--- It can only appear first, and gets a synthesized label. "entryblock" cannot
--- collide with any register/block name, since normalizeName always prefixes "a".
+-- It can only appear first; its real label is its implicit LLVM number, which
+-- funcDef fills in from the argument count (see relabelEntry). We tag it with an
+-- empty name here as a sentinel, which normalizeName can never produce.
 initialStatementsBlock :: { BasicBlock L.Range }
-  : stmts flow                     { BasicBlock (info (head $1) <-> info $2) (LName (info (head $1)) "entryblock") [] $1 $2 }
-  | flow                           { BasicBlock (info $1) (LName (info $1) "entryblock") [] [] $1 }
+  : stmts flow                     { BasicBlock (info (head $1) <-> info $2) (LName (info (head $1)) "") [] $1 $2 }
+  | flow                           { BasicBlock (info $1) (LName (info $1) "") [] [] $1 }
 
 flow :: { Flow L.Range }
   : brCall                           { FlowBranch $1 }
@@ -213,6 +216,27 @@ selectCall :: { Select L.Range }
   : select typeAnotation value ',' typeAnotation value ',' typeAnotation value { Select (L.rtRange $1 <-> info $6) $2 $3 $6 $9 }
 
 {
+-- | Give the synthesized (unlabeled) entry block its real LLVM label. LLVM
+-- numbers unnamed args, blocks and instruction results from one per-function
+-- counter in textual order; the entry block sits right after the arguments, so
+-- its number is exactly how many implicit slots the arguments consumed. A named
+-- argument (e.g. @%n@) consumes no slot, an implicitly numbered one (@%0@) does.
+relabelEntry :: [ArgumentDef a] -> [BasicBlock a] -> [BasicBlock a]
+relabelEntry args (BasicBlock r (LName lr "") phis stmts flow : rest) =
+  BasicBlock r (LName lr (entryBlockName args)) phis stmts flow : rest
+relabelEntry _ blocks = blocks
+
+entryBlockName :: [ArgumentDef a] -> String
+entryBlockName args = "a" ++ show (length (filter consumesSlot args))
+  where
+    consumesSlot (ArgumentDef _ _ Nothing) = True
+    consumesSlot (ArgumentDef _ _ (Just (LName _ name))) = isImplicit name
+    consumesSlot (ArgumentDef _ _ (Just (GName _ name))) = isImplicit name
+    -- normalizeName turns an unnamed register %N into "aN"; a named one %foo
+    -- into "afoo". So an implicitly numbered argument is "a" followed by digits.
+    isImplicit ('a':ds@(_:_)) = all isDigit ds
+    isImplicit _ = False
+
 parseError :: L.RangedToken -> L.Alex a
 parseError _ = do
   (L.AlexPn _ line column, _, _, _) <- L.alexGetInput

@@ -3,7 +3,7 @@ module ExamplesSpec (spec) where
 import Test.Hspec
 import qualified Data.ByteString.Lazy as BL
 import System.Directory (listDirectory)
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeExtension)
 import Control.Monad (forM_)
 
 import Lexer
@@ -11,7 +11,9 @@ import Parser
 
 parsesAllExaples :: FilePath -> IO ()
 parsesAllExaples dir = do
-  files <- listDirectory dir
+  entries <- listDirectory dir
+  -- Only the .ll files: examples/ also holds source subdirs (sources/, etc.).
+  let files = filter ((== ".ll") . takeExtension) entries
   forM_ files $ \file -> do
     let fullPath = dir </> file
     s <- BL.readFile fullPath
