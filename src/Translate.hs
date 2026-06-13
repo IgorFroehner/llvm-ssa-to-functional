@@ -157,7 +157,7 @@ anfSelect ty (Ast.Select _ _ condValue value1 value2) =
 
 anfIcmp :: Ast.Icmp Range -> Anf.Icmp
 anfIcmp (Ast.Icmp _ (Ast.Cmp _ cmp) ty value1 value2) =
-  Anf.Icmp cmp (anfValue (typeStr ty) value1) (anfValue (typeStr ty) value2)
+  Anf.Icmp cmp (typeStr ty) (anfValue (typeStr ty) value1) (anfValue (typeStr ty) value2)
 
 anfCall :: Ast.Call Range -> Anf.Call
 anfCall (Ast.Call _ _ name args) =

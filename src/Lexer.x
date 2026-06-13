@@ -70,7 +70,10 @@ tokens :-
 <0> fsub          { createToken BinOp }
 <0> fmul          { createToken BinOp }
 <0> fdiv          { createToken BinOp }
-<0> frem          { createToken BinOp }
+-- frem is intentionally NOT supported: it has C fmod semantics (quotient
+-- truncated toward zero, result takes the dividend's sign), which no pure
+-- Haskell primitive matches bit-exactly (Data.Fixed.mod' is floor-based). See
+-- plans/09-floating-point.md §11.1.
 
 -- Conversion operations
 <0> trunc         { createToken ConvOp }

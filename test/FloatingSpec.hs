@@ -41,12 +41,33 @@ fdiv = unlines
   , "}"
   ]
 
--- fcmp with an unordered predicate (clang's lowering of a `<=` guard).
+-- fcmp with an unordered predicate (clang's lowering of a `<=` guard). Must be
+-- NaN-faithful: ugt is true when an operand is NaN, so it needs an isNaN guard.
 fcmpUgt :: String
 fcmpUgt = unlines
   [ "define double @h(double %a) {"
   , "  %1 = fcmp ugt double %a, 0.000000e+00"
   , "  ret double %a"
+  , "}"
+  ]
+
+-- fcmp with an ordered predicate: maps to a plain operator (Haskell's < already
+-- yields False on NaN, matching LLVM's ordered semantics) -- no isNaN guard.
+fcmpOlt :: String
+fcmpOlt = unlines
+  [ "define double @o(double %a, double %b) {"
+  , "  %1 = fcmp olt double %a, %b"
+  , "  ret double %a"
+  , "}"
+  ]
+
+-- integer icmp shares the `ugt` spelling but is an unsigned compare with no NaN:
+-- it must stay a plain operator, never an isNaN guard.
+icmpUgt :: String
+icmpUgt = unlines
+  [ "define i32 @c(i32 %a, i32 %b) {"
+  , "  %1 = icmp ugt i32 %a, %b"
+  , "  ret i32 %a"
   , "}"
   ]
 
@@ -121,8 +142,18 @@ spec = parallel $ do
         let out = emit fdiv
         out `shouldSatisfy` isInfixOf " / "
         out `shouldNotSatisfy` isInfixOf "quot"
-      it "maps the unordered fcmp ugt to >" $
-        emit fcmpUgt `shouldSatisfy` isInfixOf " > "
+      it "guards the unordered fcmp ugt with isNaN (NaN-faithful)" $ do
+        let out = emit fcmpUgt
+        out `shouldSatisfy` isInfixOf "isNaN"
+        out `shouldSatisfy` isInfixOf " > "
+      it "leaves an ordered fcmp olt as a plain operator (no isNaN)" $ do
+        let out = emit fcmpOlt
+        out `shouldSatisfy` isInfixOf " < "
+        out `shouldNotSatisfy` isInfixOf "isNaN"
+      it "leaves an integer icmp ugt as a plain operator (no isNaN)" $ do
+        let out = emit icmpUgt
+        out `shouldSatisfy` isInfixOf " > "
+        out `shouldNotSatisfy` isInfixOf "isNaN"
 
     describe "literals" $ do
       it "emits floating literals as explicitly-typed Haskell literals" $

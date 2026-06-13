@@ -73,9 +73,17 @@ DEFAULT_I32 = (-100_000, 100_000)
 DEFAULT_RANGE = {"i64": (-(1 << 40), 1 << 40)}
 DEFAULT_FLOAT = (-1.0e3, 1.0e3)
 
+# Edge values for floating arguments. NaN and +/-Inf are spelled the way both C
+# strtod and Haskell read accept; they exercise the NaN-faithful fcmp codegen
+# (e.g. newton_sqrt's `fcmp ugt` guard) and IEEE infinity arithmetic. Drawn ~15%
+# of the time so a normal -n run hits them several times per argument.
+FLOAT_EDGES = ["NaN", "Infinity", "-Infinity", "0.0", "-0.0", "1.0", "-1.0"]
+
 
 def sample_one(r, t):
     if is_float(t):
+        if r.random() < 0.15:
+            return r.choice(FLOAT_EDGES)
         return repr(r.uniform(*DEFAULT_FLOAT))
     return r.randint(*DEFAULT_RANGE.get(t, DEFAULT_I32))
 
@@ -195,20 +203,23 @@ def build_native(c, workdir):
         # No value to print; call it and emit the same marker the pipeline does.
         body = f'    {c["func"]}({parse});\n    printf("()\\n");'
     elif c["ret"] == "double":
-        # Print the raw IEEE bit pattern so the comparison is exact / NaN-robust.
+        # Print the raw IEEE bit pattern (exact comparison), but canonicalise any
+        # NaN to a "nan" sentinel: a NaN result is faithful regardless of its
+        # payload/sign bits, which clang and GHC need not agree on.
         body = (f'    double _r = {c["func"]}({parse});\n'
-                '    uint64_t _u; memcpy(&_u, &_r, 8);\n'
-                '    printf("%llu\\n", (unsigned long long) _u);')
+                '    if (isnan(_r)) printf("nan\\n");\n'
+                '    else { uint64_t _u; memcpy(&_u, &_r, 8); printf("%llu\\n", (unsigned long long) _u); }')
     elif c["ret"] == "float":
         body = (f'    float _r = {c["func"]}({parse});\n'
-                '    uint32_t _u; memcpy(&_u, &_r, 4);\n'
-                '    printf("%u\\n", (unsigned) _u);')
+                '    if (isnan(_r)) printf("nan\\n");\n'
+                '    else { uint32_t _u; memcpy(&_u, &_r, 4); printf("%u\\n", (unsigned) _u); }')
     else:
         body = f'    printf("%lld\\n", (long long) {c["func"]}({parse}));'
     drv = f"""#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
 extern {ret_c} {c['func']}({params});
 int main(int argc, char **argv) {{
 {body}
@@ -259,11 +270,12 @@ def build_pipeline(c, workdir):
         # `f ()` has type () here; its Show instance prints "()" -- the same
         # marker native emits. Comparing these certifies compile-and-run.
         result = f"print ({call})"
-    elif c["ret"] == "double":
-        # Same raw IEEE bit pattern the native side prints.
-        result = f"print (castDoubleToWord64 ({call}))"
-    elif c["ret"] == "float":
-        result = f"print (castFloatToWord32 ({call}))"
+    elif c["ret"] in ("double", "float"):
+        # Same raw IEEE bit pattern the native side prints, with the matching
+        # "nan" canonicalisation (payload/sign of a NaN result is unspecified).
+        cast = "castDoubleToWord64" if c["ret"] == "double" else "castFloatToWord32"
+        result = (f"let _r = {call} in "
+                  f'if isNaN _r then putStrLn "nan" else print ({cast} _r)')
     else:
         result = f"print (fromIntegral ({call}) :: Integer)"
     src += (
@@ -293,9 +305,10 @@ def run_int(exe, argtuple):
 
 
 def run_case(c, trials, rng):
-    # ``void`` has no value to compare, so we compare stdout markers as strings;
-    # a match means both sides built and ran. Otherwise compare integer results.
-    runner = run_out if c["ret"] == "void" else run_int
+    # Integer results compare as values; ``void`` and floating results compare as
+    # stdout strings (a void marker, or a bit-pattern / "nan" sentinel). A match
+    # for void means both sides built and ran.
+    runner = run_int if c["ret"] in INT_C else run_out
     with tempfile.TemporaryDirectory() as wd:
         native = build_native(c, wd)
         pipeline = build_pipeline(c, wd)

@@ -13,6 +13,7 @@ module TypeSystem
   , elaborate
   , rho
   , widthOf
+  , isFloating
   ) where
 
 import TranslateAux (widthToHsType, llvmIntWidth)
@@ -49,3 +50,10 @@ rho TyUnit    = "()"
 widthOf :: Ty -> Int
 widthOf (TyInt n) = n
 widthOf t         = error ("widthOf: not an integer type: " ++ show t)
+
+-- | Whether a 'Ty' is an IEEE floating type. Used to pick NaN-faithful codegen
+-- for @fcmp@ (which shares predicate spellings with integer @icmp@).
+isFloating :: Ty -> Bool
+isFloating TyFloat  = True
+isFloating TyDouble = True
+isFloating _        = False

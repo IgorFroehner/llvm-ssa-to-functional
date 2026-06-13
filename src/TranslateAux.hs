@@ -71,12 +71,12 @@ translateOperator str = case str of
   -- documented signedness limitation (see plans/03-broader-subset.md).
   "ashr" -> " `shiftR` "
   -- floating-point arithmetic. fadd/fsub/fmul share Haskell's Num operators
-  -- with their integer counterparts; fdiv is true division and frem is C fmod.
+  -- with their integer counterparts; fdiv is true division. (frem is out of
+  -- subset: C fmod has no bit-exact pure-Haskell lowering -- see Lexer.x.)
   "fadd" -> " + "
   "fsub" -> " - "
   "fmul" -> " * "
   "fdiv" -> " / "
-  "frem" -> " `mod'` "
   _ -> "UNKNOWN OP"
 
 unpack :: LBS.ByteString -> String

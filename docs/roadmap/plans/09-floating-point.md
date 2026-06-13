@@ -11,17 +11,26 @@ Landed. A `src/TypeSystem.hs` module now carries the `Ty` lattice
 (`TyInt`/`TyFloat`/`TyDouble`/`TyBool`/`TyUnit`), the elaboration `elaborate`
 (total, errors off-subset — replacing the old silent `"Int"` fallback) and the
 representation map `rho`. `Anf` carries `Ty` instead of `String`; `ConvOp` carries
-source/target `Ty`; `Value` gained `FConst`. The `f*` arithmetic, `fcmp`
-(ordered + unordered predicates), the int↔float / float↔float conversions, float
-literals (decimal-exponent form) and the `nneg`/fast-math flag skips are all in.
-`TyBool` is wired but dormant (i1 still elaborates to `TyInt 1`), leaving #10 a
-localized switch as designed (§7).
+source/target `Ty`; the comparison node carries its operand `Ty`; `Value` gained
+`FConst`. The `f*` arithmetic (`fadd`/`fsub`/`fmul`/`fdiv`), `fcmp` (ordered +
+unordered predicates, **NaN-faithful** via `isNaN` guards — §5), the int↔float /
+float↔float conversions, float literals (decimal-exponent form) and the
+`nneg`/fast-math flag skips are all in. `TyBool` is wired but dormant (i1 still
+elaborates to `TyInt 1`), leaving #10 a localized switch as designed (§7).
 
 The six research-classic examples (`rump`, `muller`, `twosum`, `kahan_sum`,
 `newton_sqrt`, `logistic`) plus the type-system/codegen unit specs in
 `test/FloatingSpec.hs` are green, and the differential harness — extended for
-float signatures and **bit-pattern** comparison — certifies the whole corpus
-(26 functions) bit-for-bit exact against native clang, integer corpus included.
+float signatures, **bit-pattern** comparison and **NaN/±Inf** input sampling
+(with NaN-result canonicalisation) — certifies the whole corpus (26 functions)
+bit-for-bit exact against native clang, integer corpus included.
+
+Two review-driven corrections after the first cut: (1) `frem` was *removed* from
+the subset rather than mapped to `Data.Fixed.mod'`, whose floor semantics differ
+from C `fmod` (§11.1); (2) the unordered `fcmp` predicates and `one` were made
+NaN-faithful with `isNaN` guards instead of bare operators, which diverged on NaN
+inputs (the merged icmp/fcmp node now carries its operand `Ty` so integer `ugt`
+stays a plain `>` while float `ugt` is guarded).
 
 Deferred (matches §11 open decisions): hex IEEE float literals (corpus is all
 decimal), `ord`/`uno` NaN-test predicates, and the standalone `validate` pass
@@ -310,12 +319,18 @@ Inventory, with the typing rule each must satisfy (validated per §2):
   routinely picks the *unordered* predicate so that a NaN operand falls through
   to the negated branch (`!(a > 0)` must hold when `a` is NaN). So the minimum
   viable predicate set must include the unordered comparisons, not just the
-  ordered ones. On the **no-NaN** corpus the two collapse: with neither operand
-  NaN, `ugt` and `ogt` denote the same Haskell `>`, so both map to the natural
-  comparison and the differential harness certifies them identically. The only
-  genuinely separate cases are `ord`/`uno` (explicit NaN tests, `x == x` /
-  `x /= x`) — those remain the §11 open decision, since nothing in the corpus
-  emits them.
+  ordered ones. **They must be NaN-faithful, not merely "right on the no-NaN
+  domain":** an unordered predicate is `True` whenever an operand is NaN, but
+  Haskell's `<`/`>`/`==` return `False` on NaN, so each unordered relational and
+  `ueq` is emitted with an explicit `isNaN` guard
+  (`ugt` → `isNaN a || isNaN b || a > b`), and the ordered `one` (false unless
+  both operands are ordered) as `a == a && b == b && a /= b`. The ordered
+  relationals (`o*`) and `une` already coincide with the bare Haskell operators.
+  This is why the comparison node carries its *operand* `Ty` (§6.2): the same
+  spelling `ugt` is an unsigned-integer compare under `icmp` (plain `>`) and an
+  unordered float compare under `fcmp` (`isNaN`-guarded), and only the operand
+  sort tells them apart. `ord`/`uno` (explicit `x == x` / `x /= x` NaN tests)
+  remain the §11 open decision, since nothing in the corpus emits them.
 - **Int↔float conversions:** `sitofp uitofp fptosi fptoui` (§4).
 - **Float↔float conversions:** `fpext fptrunc` (§4).
 - **Literals:** `float`/`double` constants in LLVM's decimal-exponent form
@@ -554,8 +569,13 @@ Suggested sources (cover every §5 row):
 
 ## 11. Open decisions for the author
 
-1. **`frem` semantics.** Map to `Data.Fixed.mod'` and certify, or declare
-   out-of-subset? (C `fmod` vs `mod'` agreement needs a harness check.)
+1. **`frem` semantics.** *Resolved: out-of-subset.* `Data.Fixed.mod'` is
+   floor-based (result takes the divisor's sign), but `frem`/C `fmod` truncates
+   the quotient toward zero (result takes the dividend's sign) — e.g.
+   `fmod(-5,3) = -2` vs `mod' (-5) 3 = 1`. No *pure* Haskell primitive matches
+   `fmod` bit-exactly (the naive `a - b*truncate(a/b)` carries rounding error),
+   so `frem` is rejected rather than mapped wrongly; a faithful version would
+   need an FFI `fmod`. It appears nowhere in the corpus.
 2. **`ord`/`uno` (explicit NaN tests) only.** *Settled for the rest:* the
    ordered **and** unordered relational predicates are both required — the corpus
    forces it (`newton_sqrt.ll` emits `fcmp ugt`, §5), and on the no-NaN corpus

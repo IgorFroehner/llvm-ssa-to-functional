@@ -65,8 +65,11 @@ data Select
   = Select Value Value Value
   deriving (Show, Eq)
 
+-- | A comparison: the predicate, the /operand/ 'Ty' (so the printer can pick
+-- NaN-faithful codegen for floating @fcmp@ vs a plain operator for integer
+-- @icmp@), and the two operands. The result is always an i1.
 data Icmp
-  = Icmp String Value Value
+  = Icmp String Ty Value Value
   deriving (Show, Eq)
 
 data Flow

@@ -6,7 +6,7 @@ import Data.List (intercalate)
 
 import Anf
 import TranslateAux
-import TypeSystem (Ty, rho, widthOf)
+import TypeSystem (Ty, rho, widthOf, isFloating)
 
 import Text.Printf (printf)
 
@@ -14,7 +14,6 @@ header :: String
 header = "import Data.Bits\n\
          \import Data.Int\n\
          \import Data.Word\n\
-         \import Data.Fixed (mod')\n\
          \import GHC.Float (float2Double, double2Float)\n\n"
 
 printProgram :: Program -> String
@@ -66,7 +65,34 @@ annot :: String -> Ty -> String
 annot expr ty = printf "(%s) :: %s" expr (rho ty)
 
 printIcmp :: Icmp -> String
-printIcmp (Icmp cmp a b) = printf "if %s %s %s then 1 else 0" (printValue a) (translateCmpType cmp) (printValue b)
+printIcmp (Icmp cmp ty a b) =
+  printf "if %s then 1 else 0" (cmpExpr ty cmp (printValue a) (printValue b))
+
+-- | The Haskell boolean expression for a comparison predicate.
+--
+-- Integer @icmp@ predicates and floating @fcmp@ /ordered/ predicates map to a
+-- plain operator: Haskell's @<@\/@>@\/@==@ already yield 'False' on NaN, which
+-- is exactly LLVM's ordered semantics. The float /unordered/ predicates
+-- (@u{gt,ge,lt,le}@, @ueq@), which are 'True' whenever an operand is NaN, and
+-- the ordered @one@ (which requires both operands non-NaN) need explicit
+-- 'isNaN' guards to stay faithful. (@une@ already matches Haskell @/=@: both
+-- are 'True' on NaN.)
+cmpExpr :: Ty -> String -> String -> String -> String
+cmpExpr ty cmp a b
+  | isFloating ty = case cmp of
+      "ugt" -> unordered ">"
+      "uge" -> unordered ">="
+      "ult" -> unordered "<"
+      "ule" -> unordered "<="
+      "ueq" -> unordered "=="
+      "one" -> printf "%s == %s && %s == %s && %s /= %s" a a b b a b
+      _     -> plain
+  | otherwise = plain
+  where
+    plain = printf "%s %s %s" a (translateCmpType cmp) b
+    -- unordered: true if either operand is NaN, or the ordered relation holds.
+    unordered :: String -> String
+    unordered op = printf "isNaN %s || isNaN %s || %s %s %s" a b a op b
 
 printSelect :: Select -> String
 printSelect (Select a b c) = printf "if %s /= 0 then %s else %s" (printValue a) (printValue b) (printValue c)
