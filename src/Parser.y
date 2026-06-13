@@ -27,6 +27,7 @@ import NameNormalizer
 -- Constants
   string     { L.RangedToken (L.String _) _ }
   integer    { L.RangedToken (L.Integer _) _ }
+  floatlit   { L.RangedToken (L.FloatLit _) _ }
 -- Type
   type       { L.RangedToken (L.Type _) _ }
   i1         { L.RangedToken (L.Type _) _ }
@@ -39,6 +40,7 @@ import NameNormalizer
   call       { L.RangedToken L.Call _ }
   br         { L.RangedToken L.Br _ }
   icmp       { L.RangedToken L.Icmp _ }
+  fcmp       { L.RangedToken L.Fcmp _ }
   store      { L.RangedToken L.Store _ }
   load       { L.RangedToken L.Load _ }
   getelementptr { L.RangedToken L.GetElementPtr _ }
@@ -147,9 +149,13 @@ gname :: { Name L.Range }
 integerValue :: { IntegerValue L.Range }
   : integer                          { unTok $1 (\range (L.Integer value) -> IntegerValue range value) }
 
+floatValue :: { FloatValue L.Range }
+  : floatlit                         { unTok $1 (\range (L.FloatLit s) -> FloatValue range (normalizeFloat s)) }
+
 value :: { Value L.Range }
   : lname        { ValueName $1 }
   | integerValue { ValueInt $1 }
+  | floatValue   { ValueFloat $1 }
 
 typeAnotation :: { Type L.Range }
   : type                             { unTok $1 (\range (L.Type typeName) -> Type range (normalizeOp typeName)) }
@@ -189,8 +195,12 @@ ret :: { Return L.Range }
   : return typeAnotation value       { Return (L.rtRange $1 <-> info $3) $2 (Just $3) }
   | return typeAnotation             { Return (L.rtRange $1 <-> info $2) $2 Nothing }
 
+-- icmp and fcmp share a shape and (for this subset) the same translation: both
+-- yield an i1 and print as @if a <cmp> b then 1 else 0@. The predicate token
+-- already carries the (ordered/unordered, signed/unsigned) distinction.
 icmpCall :: { Icmp L.Range }
   : icmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
+  | fcmp cmpDef typeAnotation value ',' value { Icmp (L.rtRange $1 <-> info $6) $2 $3 $4 $6 }
 
 cmpDef :: { Cmp L.Range }
   : cmp                              { unTok $1 (\range (L.Cmp cmp) -> Cmp range (normalizeOp cmp)) }

@@ -2,23 +2,26 @@
 """Differential testing of the SSA -> ANF translation.
 
 For each example in ``examples/`` we obtain two executables of the *same*
-function and compare them over a fuzzed range of integer inputs:
+function and compare them over a fuzzed range of inputs:
 
   * native    -- clang compiles the LLVM-IR ``.ll`` directly. This is the
                  ground truth: the exact IR we translate, with real iN
-                 wraparound semantics.
+                 wraparound and IEEE-754 semantics.
   * pipeline  -- this project translates the ``.ll`` to Haskell (ANF), which
-                 GHC then compiles. Integers become Haskell ``Int`` (64-bit).
+                 GHC then compiles. Each iN becomes the matching sized Haskell
+                 integer; float/double become Float/Double.
 
 Each trial is classified:
 
   EXACT    native == pipeline
   MISMATCH otherwise -- a genuine divergence.
 
-Since the translation maps each LLVM iN to the matching sized Haskell integer
-(docs/roadmap/bit-width-fidelity.md), wraparound is faithful and every example
-is expected to be bit-for-bit EXACT. Exit status is non-zero iff any MISMATCH is
-found, so this doubles as a CI gate that also catches bit-width regressions.
+Integer results are compared as values; floating results are compared by their
+raw IEEE bit pattern (so the check is exact and NaN-robust). The translation
+maps each iN to the matching sized integer (docs/roadmap/bit-width-fidelity.md)
+and each f-op to its strict-FP Haskell counterpart, so every example is expected
+to be bit-for-bit EXACT. Exit status is non-zero iff any MISMATCH is found, so
+this doubles as a CI gate that also catches bit-width / FP regressions.
 
 The corpus is *auto-discovered*: ``discover`` scans ``examples/*.ll`` and reads
 each function's signature off its ``define`` line, so dropping a new ``.ll`` in
@@ -45,17 +48,36 @@ EXAMPLES = os.path.join(ROOT, "examples")
 
 # C type for each LLVM type we accept. Integer widths are read through C's
 # ``int``/``long long``; an ``i1`` (0/1 bool return) rides in an ``int`` too.
-# ``void`` carries no value: a void case only certifies both sides build and run
-# (see ``run_case``). Any other type (ptr, float, ...) is outside the subset, so
+# ``float``/``double`` are the IEEE types; results are compared by their raw bit
+# pattern (see ``build_native``/``build_pipeline``), so the comparison is exact
+# and NaN-robust. ``void`` carries no value: a void case only certifies both
+# sides build and run. Any other type (ptr, ...) is outside the subset, so
 # ``discover`` skips functions that mention it.
 INT_C = {"i1": "int", "i8": "int", "i16": "int", "i32": "int", "i64": "long long"}
-CTYPE = {**INT_C, "void": "void"}
+FLOAT_C = {"float": "float", "double": "double"}
+NUM_C = {**INT_C, **FLOAT_C}
+CTYPE = {**NUM_C, "void": "void"}
+
+
+def is_float(t):
+    return t in FLOAT_C
+
 
 # Default fuzz range per integer width. The i32 span deliberately crosses the
 # i32 overflow boundary -- so x*x and triangular sums wrap, exercising bit-width
 # fidelity -- while staying clear of INT_MIN (which is llvm.abs's poison case).
+# Floating arguments are sampled uniformly from a moderate magnitude (kept away
+# from NaN/Inf/overflow); both sides receive bit-identical inputs because the
+# value is passed as a round-tripping decimal and parsed by matched routines.
 DEFAULT_I32 = (-100_000, 100_000)
 DEFAULT_RANGE = {"i64": (-(1 << 40), 1 << 40)}
+DEFAULT_FLOAT = (-1.0e3, 1.0e3)
+
+
+def sample_one(r, t):
+    if is_float(t):
+        return repr(r.uniform(*DEFAULT_FLOAT))
+    return r.randint(*DEFAULT_RANGE.get(t, DEFAULT_I32))
 
 
 def case(ll, func, args, ret, sampler, note=""):
@@ -63,9 +85,9 @@ def case(ll, func, args, ret, sampler, note=""):
 
 
 def default_sampler(arg_types):
-    """A wide signed sampler derived purely from the argument widths."""
+    """A wide sampler derived purely from the argument types (int or float)."""
     def sample(r):
-        return tuple(r.randint(*DEFAULT_RANGE.get(t, DEFAULT_I32)) for t in arg_types)
+        return tuple(sample_one(r, t) for t in arg_types)
     return sample
 
 
@@ -137,7 +159,7 @@ def discover():
         if any(func == "main" for func, _, _ in defs):
             continue
         for func, args, ret in defs:
-            if ret not in CTYPE or any(a not in INT_C for a in args):
+            if ret not in CTYPE or any(a not in NUM_C for a in args):
                 continue
             sampler, note = OVERRIDES.get((ll, func), (default_sampler(args), ""))
             cases.append(case(ll, func, args, ret, sampler, note))
@@ -151,19 +173,42 @@ def sh(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
 
 
+def _parse_arg(t, idx):
+    """C expression parsing argv[idx] into the parameter type ``t``.
+
+    Floats parse with strtof/strtod (single decimal->IEEE rounding, matching the
+    Haskell ``read``); integers go through strtoll.
+    """
+    if t == "float":
+        return f"strtof(argv[{idx}], 0)"
+    if t == "double":
+        return f"strtod(argv[{idx}], 0)"
+    return f"({CTYPE[t]}) strtoll(argv[{idx}], 0, 10)"
+
+
 def build_native(c, workdir):
     """clang-compile the .ll plus a generated C driver; return the exe path."""
     ret_c = CTYPE[c["ret"]]
     params = ", ".join(CTYPE[a] for a in c["args"])
-    parse = ", ".join(f"({CTYPE[a]}) strtoll(argv[{n + 1}], 0, 10)"
-                      for n, a in enumerate(c["args"]))
+    parse = ", ".join(_parse_arg(a, n + 1) for n, a in enumerate(c["args"]))
     if c["ret"] == "void":
         # No value to print; call it and emit the same marker the pipeline does.
         body = f'    {c["func"]}({parse});\n    printf("()\\n");'
+    elif c["ret"] == "double":
+        # Print the raw IEEE bit pattern so the comparison is exact / NaN-robust.
+        body = (f'    double _r = {c["func"]}({parse});\n'
+                '    uint64_t _u; memcpy(&_u, &_r, 8);\n'
+                '    printf("%llu\\n", (unsigned long long) _u);')
+    elif c["ret"] == "float":
+        body = (f'    float _r = {c["func"]}({parse});\n'
+                '    uint32_t _u; memcpy(&_u, &_r, 4);\n'
+                '    printf("%u\\n", (unsigned) _u);')
     else:
         body = f'    printf("%lld\\n", (long long) {c["func"]}({parse}));'
     drv = f"""#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 extern {ret_c} {c['func']}({params});
 int main(int argc, char **argv) {{
 {body}
@@ -190,26 +235,41 @@ def build_pipeline(c, workdir):
     if r.returncode != 0 or not os.path.exists(hs):
         raise RuntimeError("translation failed:\n" + r.stderr)
     src = open(hs).read()
-    # getArgs must be imported with the other imports, before any definition.
-    src = src.replace("import Data.Bits",
-                      "import Data.Bits\nimport System.Environment (getArgs)", 1)
-    # The translated function is now bit-width-typed (iN -> IntN), so feed it
-    # fromIntegral-converted args and widen the signed IntN result back to
-    # Integer for printing -- this matches native's signed (long long) cast.
-    # A nullary LLVM function translates to a `() -> _` lambda, so pass unit.
-    argv = (" ".join(f"(fromIntegral (xs!!{n}))" for n in range(len(c["args"])))
+    # getArgs and the bit-cast helpers must be imported with the other imports,
+    # before any definition.
+    src = src.replace(
+        "import Data.Bits",
+        "import Data.Bits\n"
+        "import System.Environment (getArgs)\n"
+        "import GHC.Float (castFloatToWord32, castDoubleToWord64)", 1)
+    # Each argument is read at the type its position expects: a float/double
+    # parameter reads as Float/Double (single decimal->IEEE rounding, matching
+    # the C strtof/strtod), an integer parameter as Integer then fromIntegral
+    # into its sized IntN. A nullary LLVM function takes a `()`.
+    def arg_expr(n, t):
+        if t == "float":
+            return f"(read (as!!{n}) :: Float)"
+        if t == "double":
+            return f"(read (as!!{n}) :: Double)"
+        return f"(fromIntegral (read (as!!{n}) :: Integer))"
+    argv = (" ".join(arg_expr(n, t) for n, t in enumerate(c["args"]))
             if c["args"] else "()")
+    call = f"{c['func']} {argv}"
     if c["ret"] == "void":
         # `f ()` has type () here; its Show instance prints "()" -- the same
         # marker native emits. Comparing these certifies compile-and-run.
-        result = f"print ({c['func']} {argv})"
+        result = f"print ({call})"
+    elif c["ret"] == "double":
+        # Same raw IEEE bit pattern the native side prints.
+        result = f"print (castDoubleToWord64 ({call}))"
+    elif c["ret"] == "float":
+        result = f"print (castFloatToWord32 ({call}))"
     else:
-        result = f"print (fromIntegral ({c['func']} {argv}) :: Integer)"
+        result = f"print (fromIntegral ({call}) :: Integer)"
     src += (
         "\nmain :: IO ()\n"
         "main = do\n"
         "  as <- getArgs\n"
-        "  let xs = map read as :: [Integer]\n"
         f"  {result}\n"
     )
     open(hs, "w").write(src)

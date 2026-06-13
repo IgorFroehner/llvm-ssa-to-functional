@@ -8,7 +8,6 @@ module TranslateAux (
   indent,
   indentEach,
   llvmIntWidth,
-  hsTypeOfLlvm,
   widthToHsType,
   widthToWordType
   ) where
@@ -24,6 +23,12 @@ nameToString :: Ast.Name Range -> String
 nameToString (Ast.GName _ name) = name
 nameToString (Ast.LName _ name) = name
 
+-- | Spelling of a comparison predicate. Covers both integer @icmp@ predicates
+-- and floating @fcmp@ predicates. On the no-NaN subset the unordered float
+-- predicates (@u*@) denote the same Haskell comparison as their ordered (@o*@)
+-- counterparts, and the @u{gt,ge,lt,le}@ spellings are shared with @icmp@'s
+-- unsigned predicates, so a single flat table suffices. @ord@/@uno@ (explicit
+-- NaN tests) are deliberately absent — they are out of subset for now.
 translateCmpType :: String -> String
 translateCmpType str = case str of
   "eq" -> "=="
@@ -36,6 +41,15 @@ translateCmpType str = case str of
   "sge" -> ">="
   "slt" -> "<"
   "sle" -> "<="
+  -- floating-point (fcmp) ordered/unordered predicates
+  "oeq" -> "=="
+  "one" -> "/="
+  "ogt" -> ">"
+  "oge" -> ">="
+  "olt" -> "<"
+  "ole" -> "<="
+  "ueq" -> "=="
+  "une" -> "/="
   _ -> "UNKNOWN CMP"
 
 translateOperator :: String -> String
@@ -56,6 +70,13 @@ translateOperator str = case str of
   -- so `ashr` maps to it directly; `lshr` shares the spelling and stays the
   -- documented signedness limitation (see plans/03-broader-subset.md).
   "ashr" -> " `shiftR` "
+  -- floating-point arithmetic. fadd/fsub/fmul share Haskell's Num operators
+  -- with their integer counterparts; fdiv is true division and frem is C fmod.
+  "fadd" -> " + "
+  "fsub" -> " - "
+  "fmul" -> " * "
+  "fdiv" -> " / "
+  "frem" -> " `mod'` "
   _ -> "UNKNOWN OP"
 
 unpack :: LBS.ByteString -> String
@@ -96,13 +117,6 @@ widthToHsType n
 -- zero-extend rather than sign-extend.
 widthToWordType :: Int -> String
 widthToWordType n = "Word" ++ drop 3 (widthToHsType n)
-
--- | The Haskell type for an LLVM type spelling. @void@ — the only non-integer
--- type in the subset — maps to the unit type @()@, the faithful functional
--- encoding of "no value" (so @ret void@ returns @()@, not a fabricated @0@).
-hsTypeOfLlvm :: String -> String
-hsTypeOfLlvm "void" = "()"
-hsTypeOfLlvm s = maybe "Int" widthToHsType (integerWidth s)
 
 indent :: Int -> String -> String
 indent level str = replicate (level * 2) ' ' ++ str

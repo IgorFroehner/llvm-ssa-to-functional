@@ -6,11 +6,16 @@ import Data.List (intercalate)
 
 import Anf
 import TranslateAux
+import TypeSystem (Ty, rho, widthOf)
 
 import Text.Printf (printf)
 
 header :: String
-header = "import Data.Bits\nimport Data.Int\nimport Data.Word\n\n"
+header = "import Data.Bits\n\
+         \import Data.Int\n\
+         \import Data.Word\n\
+         \import Data.Fixed (mod')\n\
+         \import GHC.Float (float2Double, double2Float)\n\n"
 
 printProgram :: Program -> String
 printProgram (Program functions) = header ++ intercalate "\n\n" (map printFunction functions)
@@ -20,7 +25,7 @@ printFunction (Function name args argTypes retType lambda call) =
   let
     functionArgs = unrollArguments args
     firstBlockLabel = printCall call
-    signature = signatureString name (intercalate " -> " (argTypes ++ [retType]))
+    signature = signatureString name (intercalate " -> " (map rho (argTypes ++ [retType])))
   in signature ++ functionString name functionArgs (printLet lambda 2) firstBlockLabel
 
 unrollArguments :: [ArgumentDef] -> String
@@ -43,6 +48,7 @@ printExpr (ExpDecl decl) l = indent l $ printDecl decl
 printCall :: Call -> String
 printCall (Call (Name fname) values) = fname ++ " " ++ unwords (map printValue values)
 printCall (Call (Const value) _) = show value
+printCall (Call c@(FConst _ _) _) = printValue c
 printCall (Call Unit _) = "()"
 
 printDecl :: Decl -> String
@@ -56,8 +62,8 @@ printDecl (DeclConvOp name convop) = declString name (printConvOp convop)
 printDecl (DeclFreeze name ty value) = declString name (annot (printValue value) ty)
 
 -- | Pin a binding's result type: @(expr) :: Int32@.
-annot :: String -> String -> String
-annot = printf "(%s) :: %s"
+annot :: String -> Ty -> String
+annot expr ty = printf "(%s) :: %s" expr (rho ty)
 
 printIcmp :: Icmp -> String
 printIcmp (Icmp cmp a b) = printf "if %s %s %s then 1 else 0" (printValue a) (translateCmpType cmp) (printValue b)
@@ -67,13 +73,23 @@ printSelect (Select a b c) = printf "if %s /= 0 then %s else %s" (printValue a) 
 
 printConvOp :: ConvOp -> String
 printConvOp (ConvOp op src tgt value) = case op of
-  -- zext zero-extends: round-trip through the unsigned word type first.
-  "zext" -> printf "fromIntegral (fromIntegral %s :: %s) :: %s" v (widthToWordType src) tgtTy
-  -- trunc (narrow) and sext (signed widen) are both a plain signed conversion.
-  _      -> printf "fromIntegral %s :: %s" v tgtTy
+  -- zext / uitofp zero-extend the source: round-trip through its unsigned word
+  -- type first, so the sign bit is not propagated.
+  "zext"    -> printf "fromIntegral (fromIntegral %s :: %s) :: %s" v (wordOf src) tgtTy
+  "uitofp"  -> printf "fromIntegral (fromIntegral %s :: %s) :: %s" v (wordOf src) tgtTy
+  -- float -> int is truncation toward zero (LLVM semantics), i.e. `truncate`.
+  "fptosi"  -> printf "truncate %s :: %s" v tgtTy
+  "fptoui"  -> printf "fromIntegral (truncate %s :: %s) :: %s" v (wordOf tgt) tgtTy
+  -- float <-> double use the bit-exact GHC.Float primitives.
+  "fpext"   -> printf "float2Double %s" v
+  "fptrunc" -> printf "double2Float %s" v
+  -- trunc (narrow), sext (signed widen) and sitofp are all a plain signed
+  -- `fromIntegral` into the target type.
+  _         -> printf "fromIntegral %s :: %s" v tgtTy
   where
     v = printValue value
-    tgtTy = widthToHsType tgt
+    tgtTy = rho tgt
+    wordOf = widthToWordType . widthOf
 
 printBinOp :: BinOp -> String
 printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ rhs
@@ -85,6 +101,9 @@ printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ rh
 
 printValue :: Value -> String
 printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c
+-- A floating literal is always parenthesised and explicitly typed, so it is
+-- unambiguous as an operand/argument and pins Float vs Double (no defaulting).
+printValue (FConst txt ty) = printf "(%s :: %s)" txt (rho ty)
 printValue (Name n) = n
 printValue Unit = "()"
 
