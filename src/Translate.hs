@@ -124,7 +124,7 @@ getValueForCurrentLabel values currentLabel =
 
 anfReturn :: Ast.Return Range -> Anf.Call
 anfReturn (Ast.Return _ _ (Just valueReturned)) = Anf.Call (anfValue valueReturned) []
-anfReturn (Ast.Return _ _ Nothing) = Anf.Call (Anf.Const 0) []
+anfReturn (Ast.Return _ _ Nothing) = Anf.Call Anf.Unit []
 
 anfBindings :: [Ast.Stmt Range] -> [Anf.Expr]
 anfBindings = map anfExpr

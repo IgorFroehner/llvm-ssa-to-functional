@@ -43,7 +43,7 @@ printExpr (ExpDecl decl) l = indent l $ printDecl decl
 printCall :: Call -> String
 printCall (Call (Name fname) values) = fname ++ " " ++ unwords (map printValue values)
 printCall (Call (Const value) _) = show value
-printCall (Call Unit _) = undefined
+printCall (Call Unit _) = "()"
 
 printDecl :: Decl -> String
 printDecl (DeclBinOp name ty binop) = declString name (annot (printBinOp binop) ty)

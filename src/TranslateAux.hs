@@ -93,9 +93,11 @@ widthToHsType n
 widthToWordType :: Int -> String
 widthToWordType n = "Word" ++ drop 3 (widthToHsType n)
 
--- | The Haskell type for an LLVM type spelling. Non-integer (only @void@ in the
--- subset, where the translation fabricates a @ret 0@) falls back to 'Int'.
+-- | The Haskell type for an LLVM type spelling. @void@ — the only non-integer
+-- type in the subset — maps to the unit type @()@, the faithful functional
+-- encoding of "no value" (so @ret void@ returns @()@, not a fabricated @0@).
 hsTypeOfLlvm :: String -> String
+hsTypeOfLlvm "void" = "()"
 hsTypeOfLlvm s = maybe "Int" widthToHsType (integerWidth s)
 
 indent :: Int -> String -> String

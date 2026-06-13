@@ -41,6 +41,15 @@ gets `mod ≠ 0` (division by zero is UB natively and an exception in Haskell),
 and the pure-arithmetic kernels are fuzzed *across* the i32 overflow boundary
 on purpose so the bit-width gap is exercised rather than hidden.
 
+**No-input and `void` cases.** A function with no arguments has a single,
+deterministic input (the empty tuple), so it is run exactly once regardless of
+`-n`. A `void`-returning function (`ret_void:do_nothing`,
+[void→unit](../../docs/roadmap/08-void-unit-semantics.md)) has *no value* to
+compare — in this pure subset a void function is degenerate. Both sides instead
+print a fixed `()` marker, so its row is EXACT iff both executables built and
+ran: it certifies the unit translation compiles under GHC and runs, not a
+computed result.
+
 ## Findings
 
 With seed 1, 300 trials:

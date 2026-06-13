@@ -36,8 +36,10 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXAMPLES = os.path.join(ROOT, "examples")
 
-# C type for each LLVM integer width we emit.
-CTYPE = {"i32": "int", "i64": "long long"}
+# C type for each LLVM integer width we emit. ``void`` carries no value: a
+# ``void`` case has nothing to compare, so it only certifies that both sides
+# build and run (see ``run_case``).
+CTYPE = {"i32": "int", "i64": "long long", "void": "void"}
 
 
 def i(lo, hi):
@@ -95,6 +97,12 @@ CASES = [
     case("mod_pow", "exp_mod", ["i64", "i64", "i64"], "i64",
          lambda r: (r.randint(-1000, 1000), r.randint(0, 64), r.randint(1, 100000)),
          "exp>=0, mod!=0; products stay in i64"),
+
+    # No input, no return value: void -> () translation. Nothing to fuzz and
+    # nothing to compare numerically -- the single (empty) trial certifies that
+    # the unit translation compiles under GHC and runs on both sides.
+    case("ret_void", "do_nothing", [], "void",
+         lambda r: (), "void->(): certifies it compiles & runs"),
 ]
 
 
@@ -108,11 +116,16 @@ def build_native(c, workdir):
     params = ", ".join(CTYPE[a] for a in c["args"])
     parse = ", ".join(f"({CTYPE[a]}) strtoll(argv[{n + 1}], 0, 10)"
                       for n, a in enumerate(c["args"]))
+    if c["ret"] == "void":
+        # No value to print; call it and emit the same marker the pipeline does.
+        body = f'    {c["func"]}({parse});\n    printf("()\\n");'
+    else:
+        body = f'    printf("%lld\\n", (long long) {c["func"]}({parse}));'
     drv = f"""#include <stdio.h>
 #include <stdlib.h>
 extern {ret_c} {c['func']}({params});
 int main(int argc, char **argv) {{
-    printf("%lld\\n", (long long) {c['func']}({parse}));
+{body}
     return 0;
 }}
 """
@@ -142,13 +155,21 @@ def build_pipeline(c, workdir):
     # The translated function is now bit-width-typed (iN -> IntN), so feed it
     # fromIntegral-converted args and widen the signed IntN result back to
     # Integer for printing -- this matches native's signed (long long) cast.
-    argv = " ".join(f"(fromIntegral (xs!!{n}))" for n in range(len(c["args"])))
+    # A nullary LLVM function translates to a `() -> _` lambda, so pass unit.
+    argv = (" ".join(f"(fromIntegral (xs!!{n}))" for n in range(len(c["args"])))
+            if c["args"] else "()")
+    if c["ret"] == "void":
+        # `f ()` has type () here; its Show instance prints "()" -- the same
+        # marker native emits. Comparing these certifies compile-and-run.
+        result = f"print ({c['func']} {argv})"
+    else:
+        result = f"print (fromIntegral ({c['func']} {argv}) :: Integer)"
     src += (
         "\nmain :: IO ()\n"
         "main = do\n"
         "  as <- getArgs\n"
         "  let xs = map read as :: [Integer]\n"
-        f"  print (fromIntegral ({c['func']} {argv}) :: Integer)\n"
+        f"  {result}\n"
     )
     open(hs, "w").write(src)
     exe = os.path.join(workdir, "pipeline")
@@ -158,14 +179,22 @@ def build_pipeline(c, workdir):
     return exe
 
 
-def run_int(exe, argtuple):
+def run_out(exe, argtuple):
+    """Run the executable and return its stdout (stripped)."""
     r = sh([exe, *[str(a) for a in argtuple]])
     if r.returncode != 0:
         raise RuntimeError(f"{exe} {argtuple} exited {r.returncode}: {r.stderr}")
-    return int(r.stdout.strip())
+    return r.stdout.strip()
+
+
+def run_int(exe, argtuple):
+    return int(run_out(exe, argtuple))
 
 
 def run_case(c, trials, rng):
+    # ``void`` has no value to compare, so we compare stdout markers as strings;
+    # a match means both sides built and ran. Otherwise compare integer results.
+    runner = run_out if c["ret"] == "void" else run_int
     with tempfile.TemporaryDirectory() as wd:
         native = build_native(c, wd)
         pipeline = build_pipeline(c, wd)
@@ -177,8 +206,8 @@ def run_case(c, trials, rng):
             if args in seen:
                 continue
             seen.add(args)
-            n = run_int(native, args)
-            p = run_int(pipeline, args)
+            n = runner(native, args)
+            p = runner(pipeline, args)
             if n == p:
                 exact += 1
             else:

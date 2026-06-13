@@ -44,6 +44,11 @@ stack test --test-arguments '--match "parses all examples"'
 `docs/{gcd,prime,safe_div}/` hold worked end-to-end examples (`.c` source, `.ll`
 input, `.hs` expected output, plus CFG/dominance PNGs).
 
+Future-work directions live in `docs/roadmap/` — see `docs/roadmap/README.md` for
+the index (each item has `type`/`impact`/`effort`/`status` frontmatter and a
+per-item write-up). Consult it before starting larger features to align with the
+planned direction.
+
 ## Architecture: the translation pipeline
 
 The flow is `app/Main.hs` → Lexer → Parser → (Dominance) → Translate → PrintAnf.

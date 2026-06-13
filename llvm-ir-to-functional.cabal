@@ -77,13 +77,13 @@ executable llvm-ir-to-functional-exe
 
 test-suite llvm-ir-to-functional-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
       BitWidthSpec
       ExamplesSpec
       LexerSpec
-      Main
       ParserSpec
+      Spec
       TranslateSpec
       Paths_llvm_ir_to_functional
   autogen-modules:

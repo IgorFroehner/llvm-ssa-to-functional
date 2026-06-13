@@ -9,6 +9,7 @@ low / medium / high / godmode (the hardest research jumps).
 |----|------|------|--------|--------|--------|
 | 01 | [Differential testing of the translation](01-differential-testing.md) | testing | high | low | done |
 | 02 | [Bit-width faithful integer semantics](02-bit-width-fidelity.md) | enhancement | high | medium | done |
+| 08 | [Faithful void → unit return semantics](08-void-unit-semantics.md) | enhancement | low | low | done |
 | 05 | [Effect/type inference over LLVM-IR](05-effect-inference.md) | research | high | godmode | proposed |
 | 06 | [Side effects via monadic metalanguage](06-monadic-effects-translation.md) | research | high | godmode | proposed |
 | 03 | [Widen the accepted LLVM-IR subset](03-broader-subset.md) | enhancement | medium | medium | proposed |
