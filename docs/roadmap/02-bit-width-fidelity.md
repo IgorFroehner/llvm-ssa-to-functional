@@ -4,6 +4,7 @@ title: Bit-width faithful integer semantics
 impact: high
 effort: medium
 status: done
+plan: plans/02-bit-width-fidelity.md
 ---
 
 Today `i8`/`i32`/`i64` all collapse into Haskell `Int`, so wraparound semantics
