@@ -52,6 +52,8 @@ printDecl (DeclIcmp name ty icmp) = declString name (annot (printIcmp icmp) ty)
 printDecl (DeclSelect name ty select) = declString name (annot (printSelect select) ty)
 -- A conv op already names its target type, so it is not wrapped again.
 printDecl (DeclConvOp name convop) = declString name (printConvOp convop)
+-- freeze is the identity: emit a typed alias @name = (value) :: IntN@.
+printDecl (DeclFreeze name ty value) = declString name (annot (printValue value) ty)
 
 -- | Pin a binding's result type: @(expr) :: Int32@.
 annot :: String -> String -> String
@@ -74,7 +76,12 @@ printConvOp (ConvOp op src tgt value) = case op of
     tgtTy = widthToHsType tgt
 
 printBinOp :: BinOp -> String
-printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ printValue right
+printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ rhs
+  where
+    -- Haskell's shift functions take the amount as `Int`, but LLVM types both
+    -- shift operands at the same iN, so the (sized) amount needs coercing.
+    rhs | op `elem` ["shl", "lshr", "ashr"] = "(fromIntegral " ++ printValue right ++ ")"
+        | otherwise                         = printValue right
 
 printValue :: Value -> String
 printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c

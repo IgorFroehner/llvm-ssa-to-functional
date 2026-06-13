@@ -52,6 +52,10 @@ translateOperator str = case str of
   "xor" -> " `xor` "
   "shl" -> " `shiftL` "
   "lshr" -> " `shiftR` "
+  -- On a signed IntN, Haskell's `shiftR` is itself arithmetic (sign-propagating),
+  -- so `ashr` maps to it directly; `lshr` shares the spelling and stays the
+  -- documented signedness limitation (see plans/03-broader-subset.md).
+  "ashr" -> " `shiftR` "
   _ -> "UNKNOWN OP"
 
 unpack :: LBS.ByteString -> String

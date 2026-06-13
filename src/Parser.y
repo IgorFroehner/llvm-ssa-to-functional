@@ -43,6 +43,7 @@ import NameNormalizer
   load       { L.RangedToken L.Load _ }
   getelementptr { L.RangedToken L.GetElementPtr _ }
   select     { L.RangedToken L.Select _ }
+  freeze     { L.RangedToken L.Freeze _ }
   -- Binary operations
   binOp      { L.RangedToken (L.BinOp _) _ }
   -- Conversion operations
@@ -161,6 +162,7 @@ dec :: { Dec L.Range }
   | lname '=' binOpCall              { DecBinOp (info $1 <-> info $3) $1 $3 }
   | lname '=' convOpCall             { DecConvOp (info $1 <-> info $3) $1 $3 }
   | lname '=' selectCall             { DecSelect (info $1 <-> info $3) $1 $3 }
+  | lname '=' freezeCall             { DecFreeze (info $1 <-> info $3) $1 $3 }
 
 phiDec :: { PhiDec L.Range }
   : lname '=' phiCall                { PhiDec (info $1 <-> info $3) $1 $3 }
@@ -215,6 +217,9 @@ convOperation :: { ConvOp L.Range }
 selectCall :: { Select L.Range }
   -- $5 is the operand/result type (iN); $2 is the i1 condition type (unused).
   : select typeAnotation value ',' typeAnotation value ',' typeAnotation value { Select (L.rtRange $1 <-> info $6) $5 $3 $6 $9 }
+
+freezeCall :: { Freeze L.Range }
+  : freeze typeAnotation value { Freeze (L.rtRange $1 <-> info $3) $2 $3 }
 
 {
 -- | Give the synthesized (unlabeled) entry block its real LLVM label. LLVM

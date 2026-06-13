@@ -20,6 +20,12 @@ Since the translation maps each LLVM iN to the matching sized Haskell integer
 is expected to be bit-for-bit EXACT. Exit status is non-zero iff any MISMATCH is
 found, so this doubles as a CI gate that also catches bit-width regressions.
 
+The corpus is *auto-discovered*: ``discover`` scans ``examples/*.ll`` and reads
+each function's signature off its ``define`` line, so dropping a new ``.ll`` in
+``examples/`` certifies it automatically. The only hand-written bit is a sampler
+override in ``OVERRIDES``, needed solely when the default wide range would leave
+the subset's domain (undefined behaviour) or make a counting loop run forever.
+
 Usage:
     python3 test/differential/run.py [-n TRIALS] [--seed SEED] [case ...]
 
@@ -29,6 +35,7 @@ Requires ``clang`` and ``stack`` on PATH. Run from the repository root.
 import argparse
 import os
 import random
+import re
 import subprocess
 import sys
 import tempfile
@@ -36,74 +43,108 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXAMPLES = os.path.join(ROOT, "examples")
 
-# C type for each LLVM integer width we emit. ``void`` carries no value: a
-# ``void`` case has nothing to compare, so it only certifies that both sides
-# build and run (see ``run_case``).
-CTYPE = {"i32": "int", "i64": "long long", "void": "void"}
+# C type for each LLVM type we accept. Integer widths are read through C's
+# ``int``/``long long``; an ``i1`` (0/1 bool return) rides in an ``int`` too.
+# ``void`` carries no value: a void case only certifies both sides build and run
+# (see ``run_case``). Any other type (ptr, float, ...) is outside the subset, so
+# ``discover`` skips functions that mention it.
+INT_C = {"i1": "int", "i8": "int", "i16": "int", "i32": "int", "i64": "long long"}
+CTYPE = {**INT_C, "void": "void"}
 
+# Default fuzz range per integer width. The i32 span deliberately crosses the
+# i32 overflow boundary -- so x*x and triangular sums wrap, exercising bit-width
+# fidelity -- while staying clear of INT_MIN (which is llvm.abs's poison case).
+DEFAULT_I32 = (-100_000, 100_000)
+DEFAULT_RANGE = {"i64": (-(1 << 40), 1 << 40)}
 
-def i(lo, hi):
-    """An i32-ish sampler: random in [lo, hi]."""
-    return lambda r: r.randint(lo, hi)
-
-
-# --- The corpus -----------------------------------------------------------
-#
-# Each case: the .ll file, the target function, its signature, and a sampler
-# producing one argument tuple. Samplers encode the domain restrictions of the
-# subset (e.g. avoid the div-by-zero that is UB natively and an exception in
-# Haskell). Ranges for the pure-arithmetic kernels deliberately span the i32
-# overflow boundary so the bit-width gap is exercised, not hidden.
 
 def case(ll, func, args, ret, sampler, note=""):
     return dict(ll=ll, func=func, args=args, ret=ret, sampler=sampler, note=note)
 
 
-CASES = [
-    # Arithmetic kernels: ranges cross the i32 overflow boundary on purpose.
-    case("factorial", "factorial", ["i32"], "i32",
-         lambda r: (r.randint(-3, 34),), "n! overflows i32 for n>=13"),
-    case("from_rust", "factorial", ["i32"], "i32",
-         lambda r: (r.randint(-3, 34),), "Rust-sourced factorial"),
-    case("fib", "fib", ["i32"], "i32",
-         lambda r: (r.randint(0, 60),), "fib overflows i32 around n=47"),
-    case("sum", "asum", ["i32"], "i32",
-         lambda r: (r.randint(-5, 120000),), "triangular number, overflows i32"),
-    case("square", "square", ["i32"], "i32",
-         lambda r: (r.randint(-200000, 200000),), "x*x overflows i32"),
-    case("square", "no_overflow_square", ["i32"], "i64",
-         lambda r: (r.randint(-200000, 200000),), "i32 in, i64 out"),
+def default_sampler(arg_types):
+    """A wide signed sampler derived purely from the argument widths."""
+    def sample(r):
+        return tuple(r.randint(*DEFAULT_RANGE.get(t, DEFAULT_I32)) for t in arg_types)
+    return sample
 
-    # Bounded-result kernels: expected to be EXACT everywhere (full
-    # certification), inputs kept clear of overflow in control-flow tests.
-    case("gcd", "euclides_gcd", ["i32", "i32"], "i32",
-         lambda r: (r.randint(-10000, 10000), r.randint(-10000, 10000)),
-         "Euclid; signed rem matches C %"),
-    # Full range: m*m now overflows in true i32 in both native and pipeline, so
-    # the loop-branch behaviour matches and stays EXACT. (Previously capped at
-    # 80000 to dodge the 64-bit pipeline's divergent control flow.)
-    case("bin_search", "bin_search", ["i32"], "i32",
-         lambda r: (r.randint(-100, 1 << 20),), "isqrt; m*m overflows i32"),
-    case("tot", "phi", ["i32"], "i32",
-         lambda r: (r.randint(-50, 100000),), "Euler totient"),
-    case("prime", "is_prime", ["i32"], "i32",
-         lambda r: (r.randint(-10, 100000),), "i1 return, 0/1"),
-    case("safediv", "safe_div", ["i32", "i32"], "i32",
-         lambda r: (r.randint(-100000, 100000), r.randint(-1000, 1000)),
-         "guards b==0 -> -1"),
-    case("select", "safe_div", ["i64", "i64"], "i64",
-         lambda r: (r.randint(-(1 << 40), 1 << 40), r.randint(-1000, 1000)),
-         "ternary, i64"),
-    case("mod_pow", "exp_mod", ["i64", "i64", "i64"], "i64",
-         lambda r: (r.randint(-1000, 1000), r.randint(0, 64), r.randint(1, 100000)),
+
+# --- Sampler overrides ----------------------------------------------------
+#
+# Discovery (below) reads every function's signature straight from its
+# ``define`` line, so the *only* thing a new example needs is a sampler -- and
+# only when the default wide range would leave the subset's domain (undefined
+# behaviour) or make a counting loop run effectively forever. Keyed by
+# (file, function); anything unlisted uses ``default_sampler``.
+OVERRIDES = {
+    # fib counts the input down to zero; a negative input wraps and loops ~2^32
+    # times, so keep it non-negative (it still overflows i32 around n=47).
+    ("fib", "fib"):
+        (lambda r: (r.randint(0, 90),), "non-negative; overflows i32 ~n=47"),
+    # ashr's shift amount is UB unless it is in [0, bitwidth).
+    ("ashr", "arith_shr"):
+        (lambda r: (r.randint(-(1 << 30), 1 << 30), r.randint(0, 31)),
+         "shift amount in [0,31]"),
+    # exp_mod: exponent must be >= 0, modulus != 0 (srem by it).
+    ("mod_pow", "exp_mod"):
+        (lambda r: (r.randint(-1000, 1000), r.randint(0, 64), r.randint(1, 100000)),
          "exp>=0, mod!=0; products stay in i64"),
+    # bin_search: a wide range makes m*m overflow i32 (the divergence the
+    # bit-width work fixed); a modest default would never reach it.
+    ("bin_search", "bin_search"):
+        (lambda r: (r.randint(-100, 1 << 20),), "wide range stresses m*m i32 overflow"),
+}
 
-    # No input, no return value: void -> () translation. Nothing to fuzz and
-    # nothing to compare numerically -- the single (empty) trial certifies that
-    # the unit translation compiles under GHC and runs on both sides.
-    case("ret_void", "do_nothing", [], "void",
-         lambda r: (), "void->(): certifies it compiles & runs"),
-]
+
+DEFINE_RE = re.compile(r"define\b(?P<pre>.*?)@(?P<name>[\w.]+)\s*\((?P<args>[^)]*)\)")
+
+
+def parse_defines(path):
+    """Yield (func, arg_widths, ret_width) for every function defined in a .ll.
+
+    The signature is read positionally from the ``define`` line: the return type
+    is the token immediately before ``@name`` (so attribute soup like
+    ``range(i32 0, -2147483648) i32`` still yields ``i32``), and each argument's
+    type is the first token of its comma-separated group.
+    """
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line.startswith("define"):
+                continue
+            m = DEFINE_RE.match(line)
+            if not m:
+                continue
+            ret = m.group("pre").split()[-1]
+            args = [a.split()[0] for a in m.group("args").split(",") if a.strip()]
+            yield m.group("name"), args, ret
+
+
+def discover():
+    """Build the corpus by scanning examples/*.ll -- one case per function.
+
+    A function is skipped when its signature uses a type outside the subset. A
+    whole file is skipped when it defines ``main``: the pipeline translates the
+    entire module and appends its own ``main`` driver, and the native side
+    supplies a ``main`` too, so a translated ``main`` would collide with both.
+    """
+    cases = []
+    for fn in sorted(os.listdir(EXAMPLES)):
+        if not fn.endswith(".ll"):
+            continue
+        ll = fn[:-3]
+        defs = list(parse_defines(os.path.join(EXAMPLES, fn)))
+        if any(func == "main" for func, _, _ in defs):
+            continue
+        for func, args, ret in defs:
+            if ret not in CTYPE or any(a not in INT_C for a in args):
+                continue
+            sampler, note = OVERRIDES.get((ll, func), (default_sampler(args), ""))
+            cases.append(case(ll, func, args, ret, sampler, note))
+    return cases
+
+
+CASES = discover()
 
 
 def sh(cmd, **kw):

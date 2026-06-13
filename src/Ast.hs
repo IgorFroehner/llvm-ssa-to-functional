@@ -22,6 +22,7 @@ module Ast (
   ConvOp(..),
   ConvOpCall(..),
   Select(..),
+  Freeze(..),
   Stmt(..),
   PhiDec(..),
   Flow(..)
@@ -56,6 +57,7 @@ data Dec a
   | DecBinOp a (Name a) (BinOpCall a)
   | DecConvOp a (Name a) (ConvOpCall a)
   | DecSelect a (Name a) (Select a)
+  | DecFreeze a (Name a) (Freeze a)
   deriving (Foldable, Show, Eq)
 
 data PhiDec a
@@ -84,6 +86,12 @@ data ConvOpCall a
 
 data Select a
   = Select a (Type a) (Value a) (Value a) (Value a)
+  deriving (Foldable, Show, Eq)
+
+-- | @freeze iN %x@. In the pure subset it only blocks undef/poison propagation,
+-- so it is semantically the identity on its operand.
+data Freeze a
+  = Freeze a (Type a) (Value a)
   deriving (Foldable, Show, Eq)
 
 data Return a

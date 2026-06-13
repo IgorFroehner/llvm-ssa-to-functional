@@ -41,6 +41,7 @@ tokens :-
 <0> br            { tok Br }
 <0> phi           { tok Phi }
 <0> select        { tok Select }
+<0> freeze        { tok Freeze }
 <0> type          { tok Typedef }
 <0> call          { tok Call }
 <0> store         { tok Store }
@@ -61,6 +62,7 @@ tokens :-
 <0> or            { createToken BinOp }
 <0> shl           { createToken BinOp }
 <0> lshr          { createToken BinOp }
+<0> ashr          { createToken BinOp }
 <0> xor           { createToken BinOp }
 
 -- Conversion operations
@@ -163,6 +165,7 @@ data Token
   | Load
   | GetElementPtr
   | Select
+  | Freeze
   -- Binary operators
   | BinOp ByteString
   -- Conversion operators

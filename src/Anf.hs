@@ -47,6 +47,9 @@ data Decl
   | DeclIcmp String String Icmp
   | DeclSelect String String Select
   | DeclConvOp String ConvOp
+  -- | An LLVM @freeze@: a typed alias binding @name = value@ (freeze is the
+  -- identity in the pure subset). The 'String' is the result type annotation.
+  | DeclFreeze String String Value
   deriving (Show, Eq)
 
 -- | A width conversion: the LLVM op name (@trunc@\/@zext@\/@sext@), the source

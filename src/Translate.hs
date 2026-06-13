@@ -8,6 +8,7 @@ import qualified Anf
 
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph (lab, suc, Node)
+import Data.List (isPrefixOf)
 import Data.Maybe (fromJust)
 
 import TranslateAux
@@ -140,6 +141,7 @@ anfDec (Ast.DecConvOp _ name convop) = Anf.DeclConvOp (nameToString name) (anfCo
 -- icmp always yields an i1, regardless of its (operand) type annotation.
 anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (widthToHsType 1) (anfIcmp icmp)
 anfDec (Ast.DecSelect _ name select@(Ast.Select _ ty _ _ _)) = Anf.DeclSelect (nameToString name) (typeStr ty) (anfSelect select)
+anfDec (Ast.DecFreeze _ name (Ast.Freeze _ ty value)) = Anf.DeclFreeze (nameToString name) (typeStr ty) (anfValue value)
 
 anfConvOp :: Ast.ConvOpCall Range -> Anf.ConvOp
 anfConvOp (Ast.ConvOpCall _ (Ast.ConvOp _ op) (Ast.Type _ srcT) value (Ast.Type _ tgtT)) =
@@ -152,7 +154,26 @@ anfIcmp :: Ast.Icmp Range -> Anf.Icmp
 anfIcmp (Ast.Icmp _ (Ast.Cmp _ cmp) _ value1 value2) = Anf.Icmp cmp (anfValue value1) (anfValue value2)
 
 anfCall :: Ast.Call Range -> Anf.Call
-anfCall (Ast.Call _ _ name args) = Anf.Call (Anf.Name (nameToString name)) (anfCallArgs args)
+anfCall (Ast.Call _ _ name args) =
+  let
+    callee = nameToString name
+    callArgs = anfCallArgs args
+  in case intrinsicRewrite callee callArgs of
+    Just call -> call
+    Nothing   -> Anf.Call (Anf.Name callee) callArgs
+
+-- | Rewrite the pure integer LLVM intrinsics clang emits at @-O1@ to their
+-- Prelude equivalents. Names arrive here already punctuation-stripped by
+-- 'NameNormalizer' (@\@llvm.abs.i32@ -> @llvmabsi32@), so the match is on that
+-- normalized prefix. Only @llvm.*@ is rewritten; an ordinary same-module call
+-- yields 'Nothing' and falls through unchanged. @llvm.abs@'s second argument is
+-- the @i1@ poison immarg, which has no Haskell counterpart and is dropped.
+intrinsicRewrite :: String -> [Anf.Value] -> Maybe Anf.Call
+intrinsicRewrite callee args
+  | "llvmabs"  `isPrefixOf` callee = Just (Anf.Call (Anf.Name "abs") (take 1 args))
+  | "llvmsmin" `isPrefixOf` callee = Just (Anf.Call (Anf.Name "min") args)
+  | "llvmsmax" `isPrefixOf` callee = Just (Anf.Call (Anf.Name "max") args)
+  | otherwise                      = Nothing
 
 anfBinOp :: Ast.BinOpCall Range -> Anf.BinOp
 anfBinOp (Ast.BinOpCall _ (Ast.BinOp _ binop) _ value1 value2) = Anf.BinOp binop (anfValue value1) (anfValue value2)

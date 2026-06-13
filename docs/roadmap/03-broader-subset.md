@@ -3,18 +3,25 @@ type: enhancement
 title: Widen the accepted LLVM-IR subset (still pure)
 impact: medium
 effort: medium
-status: proposed
+status: done
+plan: plans/03-broader-subset.md
 ---
 
-Increase the surface of LLVM-IR accepted while keeping the pure-functions
-restriction:
+Increase the surface of LLVM-IR accepted while keeping the pure-functions,
+integer-only restriction. These are the **cheap wins**: missing `icmp`/binop
+variants (`ashr`), `freeze`, and integer intrinsics clang emits at `-O1`
+(`llvm.abs`, `llvm.smin`/`llvm.smax`). Each is mostly `Lexer.x`/`Parser.y` plus
+rows in the `TranslateAux` tables — no change to the core SSA→ANF algorithm.
 
-- Cheap wins: missing `icmp`/binop variants, `freeze`, intrinsics clang emits
-  at `-O1` (`abs`, `smin`/`smax`-style); `i1`-aware translation that keeps
-  booleans as `Bool` instead of re-encoding as `if … then 1 else 0`. Mostly
-  `Lexer.x`/`Parser.y` plus rows in the `TranslateAux` tables.
-- Floating point: still pure, maps to `Double`, but breaks the "everything is
-  `Int`" assumption in the output — first step that needs a two-type story
-  (a small type checker) rather than a table row.
-- Read-only aggregates/`getelementptr` over constant arrays: theoretically
-  pure, but clang rarely emits something clean enough; probably not worth it.
+The dividing line for this item: a feature qualifies as a cheap win **iff it
+needs no second value type / type checker**. Three things fail that test and are
+deliberately *out*, because they break the "everything is `Int`" assumption:
+
+- Floating point → its own item, [floating-point](09-floating-point.md).
+- Idiomatic `Bool` output (real `i1`-aware translation) → its own item,
+  [boolean-types](10-boolean-types.md). The faithful `0/1` encoding already
+  works, so this is only about idiomatic output.
+- Read-only aggregates / `getelementptr` over constant arrays — theoretically
+  pure but clang rarely emits something clean enough; not worth it for now.
+
+Implementation plan: [`plans/03-broader-subset.md`](plans/03-broader-subset.md).
