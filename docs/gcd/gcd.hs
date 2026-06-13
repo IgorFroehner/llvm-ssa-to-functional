@@ -1,15 +1,18 @@
 import Data.Bits
+import Data.Int
+import Data.Word
 
+euclides_gcd :: Int32 -> Int32 -> Int32
 euclides_gcd a0 a1 =
   let
     a2 () =
       let
         a3 a4 a5 =
           let
-            a6 = if a5 == 0 then 1 else 0
+            a6 = (if a5 == 0 then 1 else 0) :: Int8
             a7 () =
               let
-                a8 = a4 `rem` a5
+                a8 = (a4 `rem` a5) :: Int32
               in a3 a5 a8
             a9 () =
               let
@@ -19,4 +22,3 @@ euclides_gcd a0 a1 =
             else a7 ()
       in a3 a0 a1
   in a2  ()
-

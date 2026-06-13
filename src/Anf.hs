@@ -18,8 +18,11 @@ module Anf (
 
 newtype Program = Program [Function] deriving (Show, Eq)
 
+-- | A whole LLVM function. The @[String]@ are the Haskell types of the
+-- arguments and the trailing 'String' is the return type; together they form
+-- the emitted top-level signature, which anchors bit-width inference.
 data Function =
-  Function String [ArgumentDef] Lambda Call
+  Function String [ArgumentDef] [String] String Lambda Call
   deriving (Show, Eq)
 
 newtype ArgumentDef =
@@ -35,16 +38,21 @@ newtype Expr
   -- | ExpCall Call
   deriving (Show, Eq)
 
+-- | Each binding carries the Haskell type of its result (e.g. @"Int32"@) so the
+-- printer can annotate it and pin the width. 'DeclConvOp' is the exception: the
+-- conversion already names its target type, so it needs no separate annotation.
 data Decl
-  = DeclBinOp String BinOp
-  | DeclCall String Call
-  | DeclIcmp String Icmp
-  | DeclSelect String Select
+  = DeclBinOp String String BinOp
+  | DeclCall String String Call
+  | DeclIcmp String String Icmp
+  | DeclSelect String String Select
   | DeclConvOp String ConvOp
   deriving (Show, Eq)
 
-newtype ConvOp
-  = ConvOp Value
+-- | A width conversion: the LLVM op name (@trunc@\/@zext@\/@sext@), the source
+-- and target bit-widths, and the value being converted.
+data ConvOp
+  = ConvOp String Int Int Value
   deriving (Show, Eq)
 
 data Select

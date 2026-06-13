@@ -10,17 +10,18 @@ import TranslateAux
 import Text.Printf (printf)
 
 header :: String
-header = "import Data.Bits\n\n"
+header = "import Data.Bits\nimport Data.Int\nimport Data.Word\n\n"
 
 printProgram :: Program -> String
 printProgram (Program functions) = header ++ intercalate "\n\n" (map printFunction functions)
 
 printFunction :: Function -> String
-printFunction (Function name args lambda call) =
+printFunction (Function name args argTypes retType lambda call) =
   let
     functionArgs = unrollArguments args
     firstBlockLabel = printCall call
-  in functionString name functionArgs (printLet lambda 2) firstBlockLabel
+    signature = signatureString name (intercalate " -> " (argTypes ++ [retType]))
+  in signature ++ functionString name functionArgs (printLet lambda 2) firstBlockLabel
 
 unrollArguments :: [ArgumentDef] -> String
 unrollArguments ((ArgumentDef name):x) = name ++ " " ++ unrollArguments x
@@ -45,11 +46,16 @@ printCall (Call (Const value) _) = show value
 printCall (Call Unit _) = undefined
 
 printDecl :: Decl -> String
-printDecl (DeclBinOp name binop) = declString name (printBinOp binop)
-printDecl (DeclCall name call) = declString name (printCall call)
-printDecl (DeclIcmp name icmp) = declString name (printIcmp icmp)
-printDecl (DeclSelect name select) = declString name (printSelect select)
+printDecl (DeclBinOp name ty binop) = declString name (annot (printBinOp binop) ty)
+printDecl (DeclCall name ty call) = declString name (annot (printCall call) ty)
+printDecl (DeclIcmp name ty icmp) = declString name (annot (printIcmp icmp) ty)
+printDecl (DeclSelect name ty select) = declString name (annot (printSelect select) ty)
+-- A conv op already names its target type, so it is not wrapped again.
 printDecl (DeclConvOp name convop) = declString name (printConvOp convop)
+
+-- | Pin a binding's result type: @(expr) :: Int32@.
+annot :: String -> String -> String
+annot = printf "(%s) :: %s"
 
 printIcmp :: Icmp -> String
 printIcmp (Icmp cmp a b) = printf "if %s %s %s then 1 else 0" (printValue a) (translateCmpType cmp) (printValue b)
@@ -58,7 +64,14 @@ printSelect :: Select -> String
 printSelect (Select a b c) = printf "if %s /= 0 then %s else %s" (printValue a) (printValue b) (printValue c)
 
 printConvOp :: ConvOp -> String
-printConvOp (ConvOp value) = printValue value
+printConvOp (ConvOp op src tgt value) = case op of
+  -- zext zero-extends: round-trip through the unsigned word type first.
+  "zext" -> printf "fromIntegral (fromIntegral %s :: %s) :: %s" v (widthToWordType src) tgtTy
+  -- trunc (narrow) and sext (signed widen) are both a plain signed conversion.
+  _      -> printf "fromIntegral %s :: %s" v tgtTy
+  where
+    v = printValue value
+    tgtTy = widthToHsType tgt
 
 printBinOp :: BinOp -> String
 printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ printValue right
@@ -74,6 +87,9 @@ printTailCall (FlowCond cond) l = printCond cond l
 
 printCond :: IfThenElse -> Int -> String
 printCond (IfThenElse cond thenCall elseCall) l = condString l (printValue cond) (printCall thenCall) (printCall elseCall)
+
+signatureString :: String -> String -> String
+signatureString = printf "%s :: %s\n"
 
 functionString :: String -> String -> String -> String -> String
 functionString = printf "%s %s=\n  let\n%s  in %s ()\n"

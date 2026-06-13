@@ -3,7 +3,7 @@ type: enhancement
 title: Bit-width faithful integer semantics
 impact: high
 effort: medium
-status: proposed
+status: done
 ---
 
 Today `i8`/`i32`/`i64` all collapse into Haskell `Int`, so wraparound semantics
@@ -35,10 +35,15 @@ truncation of it). The harness currently caps `bin_search` inputs to dodge this.
 
 ## TODOs for this item
 
-- [ ] Map `iN` → `Int8`/`Int16`/`Int32`/`Int64` (`Data.Int`) in the emitted
+- [x] Map `iN` → `Int8`/`Int16`/`Int32`/`Int64` (`Data.Int`) in the emitted
       Haskell; make `trunc`/`zext`/`sext` actually convert.
-- [ ] Once landed, the differential harness must go all-green at **EXACT**:
+- [x] Once landed, the differential harness must go all-green at **EXACT**:
       remove the `TRUNC` allowance in `run.py` (see its
       `TODO(bit-width-fidelity)`) so width regressions fail the gate.
-- [ ] Widen the `bin_search` sampler back to its full range — the
+- [x] Widen the `bin_search` sampler back to its full range — the
       control-flow divergence should vanish.
+
+Implementation plan and outcome: [`plans/bit-width-fidelity.md`](plans/bit-width-fidelity.md).
+All 13 differential cases are now bit-for-bit EXACT. Signedness of genuinely
+*unsigned* ops (`udiv`/`urem`/`ult`/`lshr` on unsigned values) is the one
+documented limitation — everything is represented as signed `IntN`.

@@ -151,7 +151,7 @@ value :: { Value L.Range }
   | integerValue { ValueInt $1 }
 
 typeAnotation :: { Type L.Range }
-  : type                             { unTok $1 (\range (L.Type typeName) -> Type range (normalizeName typeName)) }
+  : type                             { unTok $1 (\range (L.Type typeName) -> Type range (normalizeOp typeName)) }
 
 -- Operations
 
@@ -210,10 +210,11 @@ convOpCall :: { ConvOpCall L.Range }
   : convOperation typeAnotation value to typeAnotation { ConvOpCall (info $1 <-> info $5) $1 $2 $3 $5 }
 
 convOperation :: { ConvOp L.Range }
-  : convOp { unTok $1 (\range (L.ConvOp op) -> ConvOp range (normalizeName op)) }
+  : convOp { unTok $1 (\range (L.ConvOp op) -> ConvOp range (normalizeOp op)) }
 
 selectCall :: { Select L.Range }
-  : select typeAnotation value ',' typeAnotation value ',' typeAnotation value { Select (L.rtRange $1 <-> info $6) $2 $3 $6 $9 }
+  -- $5 is the operand/result type (iN); $2 is the i1 condition type (unused).
+  : select typeAnotation value ',' typeAnotation value ',' typeAnotation value { Select (L.rtRange $1 <-> info $6) $5 $3 $6 $9 }
 
 {
 -- | Give the synthesized (unlabeled) entry block its real LLVM label. LLVM

@@ -13,14 +13,12 @@ function and compare them over a fuzzed range of integer inputs:
 Each trial is classified:
 
   EXACT    native == pipeline
-  TRUNC    native == pipeline truncated to the function's iN return width
-           (structurally correct; differs only because Int is 64-bit -- this
-           is the bit-width unsoundness documented in
-           docs/roadmap/bit-width-fidelity.md)
-  MISMATCH neither -- a genuine translation bug.
+  MISMATCH otherwise -- a genuine divergence.
 
-Exit status is non-zero iff any MISMATCH is found, so this doubles as a CI
-gate. EXACT/TRUNC-only outcomes are reported but do not fail.
+Since the translation maps each LLVM iN to the matching sized Haskell integer
+(docs/roadmap/bit-width-fidelity.md), wraparound is faithful and every example
+is expected to be bit-for-bit EXACT. Exit status is non-zero iff any MISMATCH is
+found, so this doubles as a CI gate that also catches bit-width regressions.
 
 Usage:
     python3 test/differential/run.py [-n TRIALS] [--seed SEED] [case ...]
@@ -38,9 +36,8 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXAMPLES = os.path.join(ROOT, "examples")
 
-# C type + printf cast for each LLVM integer width we emit.
+# C type for each LLVM integer width we emit.
 CTYPE = {"i32": "int", "i64": "long long"}
-BITS = {"i32": 32, "i64": 64}
 
 
 def i(lo, hi):
@@ -80,14 +77,11 @@ CASES = [
     case("gcd", "euclides_gcd", ["i32", "i32"], "i32",
          lambda r: (r.randint(-10000, 10000), r.randint(-10000, 10000)),
          "Euclid; signed rem matches C %"),
-    # TODO(bit-width-fidelity): once m*m is computed in true i32, widen this
-    # sampler back to e.g. (-100, 1<<20) -- the overflow-driven control-flow
-    # divergence below should then disappear and stay EXACT.
-    # n capped at 80000 so the intermediate m*m stays inside i32: above that
-    # the native i32 overflow of m*m flips a loop branch, diverging from the
-    # 64-bit pipeline in a way no output truncation recovers. See README.
+    # Full range: m*m now overflows in true i32 in both native and pipeline, so
+    # the loop-branch behaviour matches and stays EXACT. (Previously capped at
+    # 80000 to dodge the 64-bit pipeline's divergent control flow.)
     case("bin_search", "bin_search", ["i32"], "i32",
-         lambda r: (r.randint(-100, 80000),), "isqrt; m*m kept < i32 max"),
+         lambda r: (r.randint(-100, 1 << 20),), "isqrt; m*m overflows i32"),
     case("tot", "phi", ["i32"], "i32",
          lambda r: (r.randint(-50, 100000),), "Euler totient"),
     case("prime", "is_prime", ["i32"], "i32",
@@ -106,19 +100,6 @@ CASES = [
 
 def sh(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
-
-
-# TODO(bit-width-fidelity): the TRUNC classification only exists because iN
-# currently collapses to 64-bit Haskell Int. Once docs/roadmap/bit-width-fidelity.md
-# lands (iN -> Int8/Int32/Int64), every TRUNC row should become EXACT. At that
-# point delete this truncation path and treat "not EXACT" as a failure, so the
-# gate also catches width regressions instead of silently absorbing them.
-def trunc(value, bits):
-    """Interpret the low ``bits`` of ``value`` as a signed two's-complement int."""
-    m = value & ((1 << bits) - 1)
-    if m >= (1 << (bits - 1)):
-        m -= 1 << bits
-    return m
 
 
 def build_native(c, workdir):
@@ -158,13 +139,16 @@ def build_pipeline(c, workdir):
     # getArgs must be imported with the other imports, before any definition.
     src = src.replace("import Data.Bits",
                       "import Data.Bits\nimport System.Environment (getArgs)", 1)
-    argv = " ".join(f"(xs!!{n})" for n in range(len(c["args"])))
+    # The translated function is now bit-width-typed (iN -> IntN), so feed it
+    # fromIntegral-converted args and widen the signed IntN result back to
+    # Integer for printing -- this matches native's signed (long long) cast.
+    argv = " ".join(f"(fromIntegral (xs!!{n}))" for n in range(len(c["args"])))
     src += (
         "\nmain :: IO ()\n"
         "main = do\n"
         "  as <- getArgs\n"
-        "  let xs = map read as :: [Int]\n"
-        f"  print (({c['func']} {argv}) :: Int)\n"
+        "  let xs = map read as :: [Integer]\n"
+        f"  print (fromIntegral ({c['func']} {argv}) :: Integer)\n"
     )
     open(hs, "w").write(src)
     exe = os.path.join(workdir, "pipeline")
@@ -185,8 +169,7 @@ def run_case(c, trials, rng):
     with tempfile.TemporaryDirectory() as wd:
         native = build_native(c, wd)
         pipeline = build_pipeline(c, wd)
-        bits = BITS[c["ret"]]
-        exact = trunc_only = 0
+        exact = 0
         mismatches = []
         seen = set()
         for _ in range(trials):
@@ -198,11 +181,9 @@ def run_case(c, trials, rng):
             p = run_int(pipeline, args)
             if n == p:
                 exact += 1
-            elif trunc(p, bits) == n:
-                trunc_only += 1
             else:
                 mismatches.append((args, n, p))
-        return exact, trunc_only, mismatches, len(seen)
+        return exact, mismatches, len(seen)
 
 
 def main():
@@ -227,16 +208,15 @@ def main():
         return 2
 
     rng = random.Random(opts.seed)
-    hdr = f"{'case':<22}{'tested':>7}{'exact':>7}{'trunc':>7}{'mism':>6}  verdict"
+    hdr = f"{'case':<22}{'tested':>7}{'exact':>7}{'mism':>6}  verdict"
     print("\n" + hdr)
     print("-" * len(hdr))
 
     any_mismatch = False
-    any_trunc = False
     for c in selected:
         label = f"{c['ll']}:{c['func']}"
         try:
-            exact, tonly, mis, tested = run_case(c, opts.trials, rng)
+            exact, mis, tested = run_case(c, opts.trials, rng)
         except RuntimeError as e:
             print(f"{label:<22}  ERROR: {e}".rstrip())
             any_mismatch = True
@@ -244,12 +224,9 @@ def main():
         if mis:
             verdict = f"BUG ({len(mis)} mismatch)"
             any_mismatch = True
-        elif tonly:
-            verdict = "ok modulo i%d width" % BITS[c["ret"]]
-            any_trunc = True
         else:
             verdict = "certified (exact)"
-        print(f"{label:<22}{tested:>7}{exact:>7}{tonly:>7}{len(mis):>6}  {verdict}")
+        print(f"{label:<22}{tested:>7}{exact:>7}{len(mis):>6}  {verdict}")
         for args, n, p in mis[:3]:
             print(f"    args={args} native={n} pipeline={p}")
 
@@ -257,12 +234,7 @@ def main():
     if any_mismatch:
         print("RESULT: genuine mismatches found -- see BUG rows above.")
         return 1
-    if any_trunc:
-        print("RESULT: every example is structurally correct. The only divergence "
-              "is i32 wraparound (Haskell Int is 64-bit) -- the bit-width "
-              "unsoundness predicted in docs/roadmap/bit-width-fidelity.md.")
-    else:
-        print("RESULT: all examples bit-for-bit exact.")
+    print("RESULT: all examples bit-for-bit exact.")
     return 0
 
 

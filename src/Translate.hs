@@ -25,12 +25,23 @@ translateFunction function = buildAnfFromFunction function dom
     dom = dominance g
 
 buildAnfFromFunction :: Ast.Function Range -> Gr String () -> Anf.Function
-buildAnfFromFunction (Ast.FunctionDef _ _ name args blocks) dom = Anf.Function (nameToString name) (anfArgs args) lambda callFirstBlock
+buildAnfFromFunction (Ast.FunctionDef _ retTy name args blocks) dom =
+  Anf.Function (nameToString name) (anfArgs args) (argTypes args) (typeStr retTy) lambda callFirstBlock
   where
     lambda = anfFromTree blocks dom 0
     firstBlockLabel = firstBlockName blocks
     callFirstBlock = Anf.Call (Anf.Name firstBlockLabel) []
 -- buildAnfFromFunction _ _ = undefined
+
+-- | The Haskell type of an LLVM type annotation.
+typeStr :: Ast.Type Range -> String
+typeStr (Ast.Type _ t) = hsTypeOfLlvm t
+
+-- | Argument type spellings for the function signature. A nullary LLVM function
+-- takes a single @()@ (mirroring 'anfArgs').
+argTypes :: [Ast.ArgumentDef Range] -> [String]
+argTypes [] = ["()"]
+argTypes as = map (\(Ast.ArgumentDef _ t _) -> typeStr t) as
 
 firstBlockName :: [Ast.BasicBlock Range] -> String
 firstBlockName = getLabel . head
@@ -123,14 +134,16 @@ anfExpr (Ast.SDec stmt) = Anf.ExpDecl (anfDec stmt)
 -- anfExpr (Ast.SCall stmt) = Anf.ExpCall (anfCall stmt)
 
 anfDec :: Ast.Dec Range -> Anf.Decl
-anfDec (Ast.DecCall _ name call) = Anf.DeclCall (nameToString name) (anfCall call)
-anfDec (Ast.DecBinOp _ name binop) = Anf.DeclBinOp (nameToString name) (anfBinOp binop)
+anfDec (Ast.DecCall _ name call@(Ast.Call _ ty _ _)) = Anf.DeclCall (nameToString name) (typeStr ty) (anfCall call)
+anfDec (Ast.DecBinOp _ name binop@(Ast.BinOpCall _ _ ty _ _)) = Anf.DeclBinOp (nameToString name) (typeStr ty) (anfBinOp binop)
 anfDec (Ast.DecConvOp _ name convop) = Anf.DeclConvOp (nameToString name) (anfConvOp convop)
-anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (anfIcmp icmp)
-anfDec (Ast.DecSelect _ name select) = Anf.DeclSelect (nameToString name) (anfSelect select)
+-- icmp always yields an i1, regardless of its (operand) type annotation.
+anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (widthToHsType 1) (anfIcmp icmp)
+anfDec (Ast.DecSelect _ name select@(Ast.Select _ ty _ _ _)) = Anf.DeclSelect (nameToString name) (typeStr ty) (anfSelect select)
 
 anfConvOp :: Ast.ConvOpCall Range -> Anf.ConvOp
-anfConvOp (Ast.ConvOpCall _ _ _ value _) = Anf.ConvOp (anfValue value)
+anfConvOp (Ast.ConvOpCall _ (Ast.ConvOp _ op) (Ast.Type _ srcT) value (Ast.Type _ tgtT)) =
+  Anf.ConvOp op (llvmIntWidth srcT) (llvmIntWidth tgtT) (anfValue value)
 
 anfSelect :: Ast.Select Range -> Anf.Select
 anfSelect (Ast.Select _ _ condValue value1 value2) = Anf.Select (anfValue condValue) (anfValue value1) (anfValue value2)
