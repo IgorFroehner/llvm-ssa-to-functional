@@ -98,10 +98,12 @@ tokens :-
 <0> ","         { tok Comma }
 <0> to          { tok To }
 
--- Beginning of a block. Clang emits named labels containing '.' and '$'
--- (e.g. @for.cond.cleanup:@); normalizeName strips the punctuation so the def
--- and its @%for.cond.cleanup@ references collapse to the same identifier.
-<0> ([a-zA-Z_0-9\.\$])+ ":" { createToken BasicBlock }
+-- Beginning of a block. Clang emits named labels containing '.'
+-- (e.g. @for.cond.cleanup:@); normalizeName (removePunc) strips the '.' so the
+-- def and its @%for.cond.cleanup@ reference collapse to the same identifier.
+-- '$' is deliberately not accepted: clang does not emit it in labels and
+-- removePunc does not strip it, so it could not be made a valid identifier.
+<0> ([a-zA-Z_0-9\.])+ ":" { createToken BasicBlock }
 
 -- Identifiers
 <0> @global_id     { createToken GIdentifier }
