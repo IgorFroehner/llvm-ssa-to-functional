@@ -1,4 +1,8 @@
 {
+-- Alex's bytestring wrapper emits an unconditional `import qualified Data.Char`
+-- into the generated code, which is redundant under our -Wall build. Suppress it
+-- here since we can't edit the generated module.
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 module Lexer
   ( -- * Invoking Alex
     Alex
@@ -227,9 +231,9 @@ data Token
   deriving (Eq, Show)
 
 mkRange :: AlexInput -> Int64 -> Range
-mkRange (start, _, str, _) len = Range{start = start, stop = stop}
+mkRange (startPos, _, str, _) len = Range{start = startPos, stop = stopPos}
   where
-    stop = BS.foldl' alexMove start $ BS.take len str
+    stopPos = BS.foldl' alexMove startPos $ BS.take len str
 
 tok :: Token -> AlexAction RangedToken
 tok ctor inp len =
