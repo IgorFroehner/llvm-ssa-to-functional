@@ -25,7 +25,11 @@ annotDumpBackend :: Backend
 annotDumpBackend = Backend { backendName = "annot-dump", render = dumpProgram }
 
 -- | Render the annotation-bearing structure of a program. Unlike the Haskell
--- backend this is not executable code; it surfaces every node's label.
+-- backend this is not executable code; it surfaces the label on each /function/,
+-- /block/ and /binding/ — the three granularities effect inference works at
+-- (per-function, per-block, per-binding; see plan §3 D1 / open decision 4). Leaf
+-- operand nodes ('Value', 'BinOp', 'Call', …) also carry a label, but it is the
+-- inert unit\/⊥ and conveys nothing, so it is intentionally not shown.
 dumpProgram :: Show a => Program a -> String
 dumpProgram (Program fs) = intercalate "\n" (map dumpFunction fs)
 
