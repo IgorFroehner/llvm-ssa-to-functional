@@ -37,6 +37,7 @@ tokens :-
 <0> define        { tok Define }
 <0> declare       { tok Declare }
 <0> icmp          { tok Icmp }
+<0> fcmp          { tok Fcmp }
 <0> ret           { tok Return }
 <0> br            { tok Br }
 <0> phi           { tok Phi }
@@ -64,11 +65,27 @@ tokens :-
 <0> lshr          { createToken BinOp }
 <0> ashr          { createToken BinOp }
 <0> xor           { createToken BinOp }
+-- Floating-point arithmetic
+<0> fadd          { createToken BinOp }
+<0> fsub          { createToken BinOp }
+<0> fmul          { createToken BinOp }
+<0> fdiv          { createToken BinOp }
+-- frem is intentionally NOT supported: it has C fmod semantics (quotient
+-- truncated toward zero, result takes the dividend's sign), which no pure
+-- Haskell primitive matches bit-exactly (Data.Fixed.mod' is floor-based). See
+-- plans/09-floating-point.md §11.1.
 
 -- Conversion operations
 <0> trunc         { createToken ConvOp }
 <0> zext          { createToken ConvOp }
 <0> sext          { createToken ConvOp }
+-- Floating-point conversions
+<0> sitofp        { createToken ConvOp }
+<0> uitofp        { createToken ConvOp }
+<0> fptosi        { createToken ConvOp }
+<0> fptoui        { createToken ConvOp }
+<0> fpext         { createToken ConvOp }
+<0> fptrunc       { createToken ConvOp }
 
 -- Markers
 <0> "="         { tok Assign }
@@ -81,8 +98,12 @@ tokens :-
 <0> ","         { tok Comma }
 <0> to          { tok To }
 
--- Beginning of a block
-<0> ([a-zA-Z_0-9])+ ":" { createToken BasicBlock }
+-- Beginning of a block. Clang emits named labels containing '.'
+-- (e.g. @for.cond.cleanup:@), and LLVM also admits '$'; normalizeName
+-- (removePunc) strips both, so a label and its @%for.cond.cleanup@ reference
+-- collapse to the same valid Haskell identifier (matching @local_id@/@global_id@,
+-- which accept the same characters).
+<0> ([a-zA-Z_0-9\.\$])+ ":" { createToken BasicBlock }
 
 -- Identifiers
 <0> @global_id     { createToken GIdentifier }
@@ -92,13 +113,17 @@ tokens :-
 <0> (void | label | i$digit+ | half | float | double | fp128 | ptr) { createToken Type }
 
 -- Constants
+-- Floating-point literal (decimal-exponent form, e.g. 4.250000e+00). Must come
+-- before the integer rule; maximal munch picks it because it is longer.
+<0> \-?$digit+\.$digit+([eE][\+\-]?$digit+)? { createToken FloatLit }
 <0> \-?$digit+   { tokInteger }
 <0> \"[^\"]*\"   { createToken String }
 <0> false | true { tokInteger }
 
 -- Types of comparison
-
-<0> (eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle) { createToken Cmp }
+-- Integer (icmp) predicates plus floating (fcmp) ordered/unordered ones. The
+-- u{gt,ge,lt,le} spellings are shared; ord/uno (NaN tests) are out of subset.
+<0> (eq | ne | ugt | uge | ult | ule | sgt | sge | slt | sle | oeq | one | ogt | oge | olt | ole | ueq | une) { createToken Cmp }
 
 -- Ignore for now
 <0> "#"$digit+         ;
@@ -110,6 +135,17 @@ tokens :-
 <0> inbounds           ;
 <0> nsw                ;
 <0> nuw                ;
+-- Non-negativity hint on zext/uitofp, and fast-math flags: non-semantic, so
+-- dropped exactly like nsw/nuw (see plans/09-floating-point.md).
+<0> nneg               ;
+<0> fast               ;
+<0> nnan               ;
+<0> ninf               ;
+<0> nsz                ;
+<0> arcp               ;
+<0> contract           ;
+<0> reassoc            ;
+<0> afn                ;
 <0> tail               ;
 <0> dso_local          ;
 <0> noundef            ;
@@ -150,6 +186,7 @@ data Token
   -- Constants
   | String ByteString
   | Integer Integer
+  | FloatLit ByteString
   -- Type
   | Type ByteString
   -- Keywords
@@ -161,6 +198,7 @@ data Token
   | Call
   | Br
   | Icmp
+  | Fcmp
   | Store
   | Load
   | GetElementPtr

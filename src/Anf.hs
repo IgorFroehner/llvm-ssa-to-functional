@@ -16,13 +16,15 @@ module Anf (
   Value(..),
 ) where
 
+import TypeSystem (Ty)
+
 newtype Program = Program [Function] deriving (Show, Eq)
 
--- | A whole LLVM function. The @[String]@ are the Haskell types of the
--- arguments and the trailing 'String' is the return type; together they form
--- the emitted top-level signature, which anchors bit-width inference.
+-- | A whole LLVM function. The @['Ty']@ are the argument types and the trailing
+-- 'Ty' is the return type; together they form the emitted top-level signature,
+-- which anchors bit-width inference.
 data Function =
-  Function String [ArgumentDef] [String] String Lambda Call
+  Function String [ArgumentDef] [Ty] Ty Lambda Call
   deriving (Show, Eq)
 
 newtype ArgumentDef =
@@ -38,32 +40,36 @@ newtype Expr
   -- | ExpCall Call
   deriving (Show, Eq)
 
--- | Each binding carries the Haskell type of its result (e.g. @"Int32"@) so the
--- printer can annotate it and pin the width. 'DeclConvOp' is the exception: the
--- conversion already names its target type, so it needs no separate annotation.
+-- | Each binding carries the 'Ty' of its result so the printer can annotate it
+-- and pin the representation. 'DeclConvOp' is the exception: the conversion
+-- already names its target type, so it needs no separate annotation.
 data Decl
-  = DeclBinOp String String BinOp
-  | DeclCall String String Call
-  | DeclIcmp String String Icmp
-  | DeclSelect String String Select
+  = DeclBinOp String Ty BinOp
+  | DeclCall String Ty Call
+  | DeclIcmp String Ty Icmp
+  | DeclSelect String Ty Select
   | DeclConvOp String ConvOp
   -- | An LLVM @freeze@: a typed alias binding @name = value@ (freeze is the
-  -- identity in the pure subset). The 'String' is the result type annotation.
-  | DeclFreeze String String Value
+  -- identity in the pure subset). The 'Ty' is the result type annotation.
+  | DeclFreeze String Ty Value
   deriving (Show, Eq)
 
--- | A width conversion: the LLVM op name (@trunc@\/@zext@\/@sext@), the source
--- and target bit-widths, and the value being converted.
+-- | A conversion: the LLVM op name (@trunc@\/@zext@\/@sext@\/@sitofp@\/…), the
+-- source and target 'Ty' (conversions may cross sorts, so widths alone are
+-- insufficient), and the value being converted.
 data ConvOp
-  = ConvOp String Int Int Value
+  = ConvOp String Ty Ty Value
   deriving (Show, Eq)
 
 data Select
   = Select Value Value Value
   deriving (Show, Eq)
 
+-- | A comparison: the predicate, the /operand/ 'Ty' (so the printer can pick
+-- NaN-faithful codegen for floating @fcmp@ vs a plain operator for integer
+-- @icmp@), and the two operands. The result is always an i1.
 data Icmp
-  = Icmp String Value Value
+  = Icmp String Ty Value Value
   deriving (Show, Eq)
 
 data Flow
@@ -85,6 +91,9 @@ data IfThenElse
 
 data Value
   = Const Integer
+  -- | A floating constant: the (Haskell-renderable) literal text and its 'Ty'
+  -- (so the printer emits @Float@ vs @Double@ and an explicitly-typed literal).
+  | FConst String Ty
   | Name String
   | Unit
   deriving (Show, Eq)

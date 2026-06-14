@@ -36,6 +36,7 @@ library
       PrintAnf
       Translate
       TranslateAux
+      TypeSystem
   other-modules:
       Paths_llvm_ir_to_functional
   autogen-modules:
@@ -81,7 +82,9 @@ test-suite llvm-ir-to-functional-test
   other-modules:
       BitWidthSpec
       ExamplesSpec
+      FloatingSpec
       LexerSpec
+      NameNormalizerSpec
       ParserSpec
       Spec
       TranslateSpec

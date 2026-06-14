@@ -12,6 +12,7 @@ import Data.List (isPrefixOf)
 import Data.Maybe (fromJust)
 
 import TranslateAux
+import TypeSystem (Ty(..), elaborate)
 import AstHelpers
 
 import Dominance (buildGraph, dominance)
@@ -34,14 +35,14 @@ buildAnfFromFunction (Ast.FunctionDef _ retTy name args blocks) dom =
     callFirstBlock = Anf.Call (Anf.Name firstBlockLabel) []
 -- buildAnfFromFunction _ _ = undefined
 
--- | The Haskell type of an LLVM type annotation.
-typeStr :: Ast.Type Range -> String
-typeStr (Ast.Type _ t) = hsTypeOfLlvm t
+-- | Elaborate an LLVM type annotation into the internal 'Ty'.
+typeStr :: Ast.Type Range -> Ty
+typeStr (Ast.Type _ t) = elaborate t
 
--- | Argument type spellings for the function signature. A nullary LLVM function
--- takes a single @()@ (mirroring 'anfArgs').
-argTypes :: [Ast.ArgumentDef Range] -> [String]
-argTypes [] = ["()"]
+-- | Argument types for the function signature. A nullary LLVM function takes a
+-- single @()@ (mirroring 'anfArgs').
+argTypes :: [Ast.ArgumentDef Range] -> [Ty]
+argTypes [] = [TyUnit]
 argTypes as = map (\(Ast.ArgumentDef _ t _) -> typeStr t) as
 
 firstBlockName :: [Ast.BasicBlock Range] -> String
@@ -114,17 +115,18 @@ callArgsFromBlockPhis (Ast.BasicBlock _ _ [] _ _) _ = [Anf.Unit]
 callArgsFromBlockPhis (Ast.BasicBlock _ _ phis _ _) label = map (callArgFromPhi label) phis
 
 callArgFromPhi :: String -> Ast.PhiDec Range -> Anf.Value
-callArgFromPhi currentLabel (Ast.PhiDec _ _ (Ast.Phi _ _ values)) = getValueForCurrentLabel values currentLabel
+callArgFromPhi currentLabel (Ast.PhiDec _ _ (Ast.Phi _ ty values)) = getValueForCurrentLabel (typeStr ty) values currentLabel
 
-getValueForCurrentLabel :: [(Ast.Value Range, Ast.Name Range)] -> String -> Anf.Value
-getValueForCurrentLabel values currentLabel =
+-- | Resolve a φ-incoming value for the source block, typed by the φ-node's
+-- declared type (so a floating literal is tagged 'Anf.FConst' correctly).
+getValueForCurrentLabel :: Ty -> [(Ast.Value Range, Ast.Name Range)] -> String -> Anf.Value
+getValueForCurrentLabel ty values currentLabel =
   case filter (\(_, name) -> nameToString name == currentLabel) values of
-    [(Ast.ValueInt (Ast.IntegerValue _ value), _)] -> Anf.Const value
-    [(Ast.ValueName name, _)] -> Anf.Name (nameToString name)
+    [(value, _)] -> anfValue ty value
     _ -> error $ "Phi value not found for label " ++ currentLabel
 
 anfReturn :: Ast.Return Range -> Anf.Call
-anfReturn (Ast.Return _ _ (Just valueReturned)) = Anf.Call (anfValue valueReturned) []
+anfReturn (Ast.Return _ ty (Just valueReturned)) = Anf.Call (anfValue (typeStr ty) valueReturned) []
 anfReturn (Ast.Return _ _ Nothing) = Anf.Call Anf.Unit []
 
 anfBindings :: [Ast.Stmt Range] -> [Anf.Expr]
@@ -138,20 +140,24 @@ anfDec :: Ast.Dec Range -> Anf.Decl
 anfDec (Ast.DecCall _ name call@(Ast.Call _ ty _ _)) = Anf.DeclCall (nameToString name) (typeStr ty) (anfCall call)
 anfDec (Ast.DecBinOp _ name binop@(Ast.BinOpCall _ _ ty _ _)) = Anf.DeclBinOp (nameToString name) (typeStr ty) (anfBinOp binop)
 anfDec (Ast.DecConvOp _ name convop) = Anf.DeclConvOp (nameToString name) (anfConvOp convop)
--- icmp always yields an i1, regardless of its (operand) type annotation.
-anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (widthToHsType 1) (anfIcmp icmp)
-anfDec (Ast.DecSelect _ name select@(Ast.Select _ ty _ _ _)) = Anf.DeclSelect (nameToString name) (typeStr ty) (anfSelect select)
-anfDec (Ast.DecFreeze _ name (Ast.Freeze _ ty value)) = Anf.DeclFreeze (nameToString name) (typeStr ty) (anfValue value)
+-- icmp/fcmp always yield an i1, regardless of their (operand) type annotation.
+anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (TyInt 1) (anfIcmp icmp)
+anfDec (Ast.DecSelect _ name select@(Ast.Select _ ty _ _ _)) = Anf.DeclSelect (nameToString name) (typeStr ty) (anfSelect (typeStr ty) select)
+anfDec (Ast.DecFreeze _ name (Ast.Freeze _ ty value)) = Anf.DeclFreeze (nameToString name) (typeStr ty) (anfValue (typeStr ty) value)
 
 anfConvOp :: Ast.ConvOpCall Range -> Anf.ConvOp
-anfConvOp (Ast.ConvOpCall _ (Ast.ConvOp _ op) (Ast.Type _ srcT) value (Ast.Type _ tgtT)) =
-  Anf.ConvOp op (llvmIntWidth srcT) (llvmIntWidth tgtT) (anfValue value)
+anfConvOp (Ast.ConvOpCall _ (Ast.ConvOp _ op) srcT value tgtT) =
+  Anf.ConvOp op (typeStr srcT) (typeStr tgtT) (anfValue (typeStr srcT) value)
 
-anfSelect :: Ast.Select Range -> Anf.Select
-anfSelect (Ast.Select _ _ condValue value1 value2) = Anf.Select (anfValue condValue) (anfValue value1) (anfValue value2)
+-- | The select condition is an i1 (typed 'TyInt 1'); both arms carry the
+-- result type @ty@.
+anfSelect :: Ty -> Ast.Select Range -> Anf.Select
+anfSelect ty (Ast.Select _ _ condValue value1 value2) =
+  Anf.Select (anfValue (TyInt 1) condValue) (anfValue ty value1) (anfValue ty value2)
 
 anfIcmp :: Ast.Icmp Range -> Anf.Icmp
-anfIcmp (Ast.Icmp _ (Ast.Cmp _ cmp) _ value1 value2) = Anf.Icmp cmp (anfValue value1) (anfValue value2)
+anfIcmp (Ast.Icmp _ (Ast.Cmp _ cmp) ty value1 value2) =
+  Anf.Icmp cmp (typeStr ty) (anfValue (typeStr ty) value1) (anfValue (typeStr ty) value2)
 
 anfCall :: Ast.Call Range -> Anf.Call
 anfCall (Ast.Call _ _ name args) =
@@ -176,17 +182,23 @@ intrinsicRewrite callee args
   | otherwise                      = Nothing
 
 anfBinOp :: Ast.BinOpCall Range -> Anf.BinOp
-anfBinOp (Ast.BinOpCall _ (Ast.BinOp _ binop) _ value1 value2) = Anf.BinOp binop (anfValue value1) (anfValue value2)
+anfBinOp (Ast.BinOpCall _ (Ast.BinOp _ binop) ty value1 value2) =
+  Anf.BinOp binop (anfValue (typeStr ty) value1) (anfValue (typeStr ty) value2)
 
 anfCallArgs :: [Ast.CallArgument Range] -> [Anf.Value]
 anfCallArgs = map anfCallArg
 
 anfCallArg :: Ast.CallArgument Range -> Anf.Value
-anfCallArg (Ast.CallArgument _ _ value) = anfValue value
+anfCallArg (Ast.CallArgument _ ty value) = anfValue (typeStr ty) value
 
-anfValue :: Ast.Value Range -> Anf.Value
-anfValue (Ast.ValueInt (Ast.IntegerValue _ int)) = Anf.Const int
-anfValue (Ast.ValueName name) = Anf.Name (nameToString name)
+-- | Translate an operand. The contextual 'Ty' (from the enclosing instruction's
+-- annotation) is only consulted for floating literals, which must be tagged so
+-- the printer emits @Float@\/@Double@ and an explicitly-typed literal; names and
+-- integer literals print the same regardless.
+anfValue :: Ty -> Ast.Value Range -> Anf.Value
+anfValue _ (Ast.ValueInt (Ast.IntegerValue _ int)) = Anf.Const int
+anfValue _ (Ast.ValueName name) = Anf.Name (nameToString name)
+anfValue ty (Ast.ValueFloat (Ast.FloatValue _ txt)) = Anf.FConst txt ty
 
 valueFromName :: Ast.Name Range -> Anf.Value
 valueFromName = Anf.Name . nameToString

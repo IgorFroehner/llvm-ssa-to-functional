@@ -1,5 +1,5 @@
 
-module NameNormalizer (normalizeName, normalizeBlockName, normalizeOp, normalizeGlobal) where
+module NameNormalizer (normalizeName, normalizeBlockName, normalizeOp, normalizeGlobal, normalizeFloat) where
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.ByteString.Lazy.Char8 (ByteString)
@@ -9,6 +9,12 @@ normalizeName name = "a" ++ removePunc (unpack name)
 
 normalizeOp :: ByteString -> String
 normalizeOp name = removePunc (unpack name)
+
+-- | A floating-point literal's LLVM spelling is already a valid Haskell literal
+-- (decimal-exponent form), so it passes through verbatim. The printer wraps it
+-- in parentheses and annotates it with its type.
+normalizeFloat :: ByteString -> String
+normalizeFloat = unpack
 
 -- | Normalize a global (function) name to a valid, non-colliding Haskell
 -- identifier. Like 'normalizeOp' it strips punctuation, but it also escapes
@@ -30,11 +36,15 @@ normalizeGlobal name =
 normalizeBlockName :: ByteString -> String
 normalizeBlockName name = "f" ++ removePunc (unpack name)
 
+-- | Strip the punctuation the lexer admits inside LLVM identifiers, leaving a
+-- valid Haskell identifier body. Covers every such character: the sigils
+-- (@%@\/@\@@), the dotted/dollar name chars LLVM allows in locals, globals and
+-- block labels (@.@\/@$@ — e.g. @%for.cond@, @\@foo$bar@), and the label colon.
 removePunc :: String -> String
 removePunc = filter (`notElem` punctuation)
   where
     punctuation :: [Char]
-    punctuation = ",.?!-:;\"'%@"
+    punctuation = ",.?!-:;\"'%@$"
 
 unpack :: LBS.ByteString -> String
 unpack = LBS.unpack

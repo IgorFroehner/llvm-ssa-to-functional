@@ -4,6 +4,7 @@ module Ast (
   Program(..),
   Name(..),
   IntegerValue(..),
+  FloatValue(..),
   Value(..),
   Type(..),
   Call(..),
@@ -111,8 +112,15 @@ data IntegerValue a
   = IntegerValue a Integer
   deriving (Foldable, Show, Eq)
 
+-- | A floating-point literal, carried as its raw (decimal-exponent) LLVM
+-- spelling, which is also a valid Haskell literal.
+data FloatValue a
+  = FloatValue a String
+  deriving (Foldable, Show, Eq)
+
 data Value a
   = ValueInt (IntegerValue a)
+  | ValueFloat (FloatValue a)
   | ValueName (Name a)
   deriving (Foldable, Show, Eq)
 
