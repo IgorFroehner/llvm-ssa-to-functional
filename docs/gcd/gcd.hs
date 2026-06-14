@@ -1,6 +1,7 @@
 import Data.Bits
 import Data.Int
 import Data.Word
+import GHC.Float (float2Double, double2Float)
 
 euclides_gcd :: Int32 -> Int32 -> Int32
 euclides_gcd a0 a1 =
@@ -9,7 +10,7 @@ euclides_gcd a0 a1 =
       let
         a3 a4 a5 =
           let
-            a6 = (if a5 == 0 then 1 else 0) :: Int8
+            a6 = (a5 == 0) :: Bool
             a7 () =
               let
                 a8 = (a4 `rem` a5) :: Int32
@@ -17,7 +18,7 @@ euclides_gcd a0 a1 =
             a9 () =
               let
               in a4 
-          in if a6 /= 0
+          in if a6
             then a9 ()
             else a7 ()
       in a3 a0 a1

@@ -140,8 +140,8 @@ anfDec :: Ast.Dec Range -> Anf.Decl
 anfDec (Ast.DecCall _ name call@(Ast.Call _ ty _ _)) = Anf.DeclCall (nameToString name) (typeStr ty) (anfCall call)
 anfDec (Ast.DecBinOp _ name binop@(Ast.BinOpCall _ _ ty _ _)) = Anf.DeclBinOp (nameToString name) (typeStr ty) (anfBinOp binop)
 anfDec (Ast.DecConvOp _ name convop) = Anf.DeclConvOp (nameToString name) (anfConvOp convop)
--- icmp/fcmp always yield an i1, regardless of their (operand) type annotation.
-anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) (TyInt 1) (anfIcmp icmp)
+-- icmp/fcmp always yield an i1 (= 'TyBool'), regardless of their (operand) type.
+anfDec (Ast.DecIcmp _ name icmp) = Anf.DeclIcmp (nameToString name) TyBool (anfIcmp icmp)
 anfDec (Ast.DecSelect _ name select@(Ast.Select _ ty _ _ _)) = Anf.DeclSelect (nameToString name) (typeStr ty) (anfSelect (typeStr ty) select)
 anfDec (Ast.DecFreeze _ name (Ast.Freeze _ ty value)) = Anf.DeclFreeze (nameToString name) (typeStr ty) (anfValue (typeStr ty) value)
 
@@ -149,11 +149,11 @@ anfConvOp :: Ast.ConvOpCall Range -> Anf.ConvOp
 anfConvOp (Ast.ConvOpCall _ (Ast.ConvOp _ op) srcT value tgtT) =
   Anf.ConvOp op (typeStr srcT) (typeStr tgtT) (anfValue (typeStr srcT) value)
 
--- | The select condition is an i1 (typed 'TyInt 1'); both arms carry the
+-- | The select condition is an i1 (typed 'TyBool'); both arms carry the
 -- result type @ty@.
 anfSelect :: Ty -> Ast.Select Range -> Anf.Select
 anfSelect ty (Ast.Select _ _ condValue value1 value2) =
-  Anf.Select (anfValue (TyInt 1) condValue) (anfValue ty value1) (anfValue ty value2)
+  Anf.Select (anfValue TyBool condValue) (anfValue ty value1) (anfValue ty value2)
 
 anfIcmp :: Ast.Icmp Range -> Anf.Icmp
 anfIcmp (Ast.Icmp _ (Ast.Cmp _ cmp) ty value1 value2) =
@@ -196,6 +196,8 @@ anfCallArg (Ast.CallArgument _ ty value) = anfValue (typeStr ty) value
 -- the printer emits @Float@\/@Double@ and an explicitly-typed literal; names and
 -- integer literals print the same regardless.
 anfValue :: Ty -> Ast.Value Range -> Anf.Value
+-- An i1 literal (LLVM @true@\/@false@, lexed as 1\/0) is a 'Bool' in context.
+anfValue TyBool (Ast.ValueInt (Ast.IntegerValue _ int)) = Anf.BConst (int /= 0)
 anfValue _ (Ast.ValueInt (Ast.IntegerValue _ int)) = Anf.Const int
 anfValue _ (Ast.ValueName name) = Anf.Name (nameToString name)
 anfValue ty (Ast.ValueFloat (Ast.FloatValue _ txt)) = Anf.FConst txt ty

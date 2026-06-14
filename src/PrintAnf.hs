@@ -6,7 +6,7 @@ import Data.List (intercalate)
 
 import Anf
 import TranslateAux
-import TypeSystem (Ty, rho, widthOf, isFloating)
+import TypeSystem (Ty(..), rho, widthOf, isFloating)
 
 import Text.Printf (printf)
 
@@ -48,10 +48,11 @@ printCall :: Call -> String
 printCall (Call (Name fname) values) = fname ++ " " ++ unwords (map printValue values)
 printCall (Call (Const value) _) = show value
 printCall (Call c@(FConst _ _) _) = printValue c
+printCall (Call c@(BConst _) _) = printValue c
 printCall (Call Unit _) = "()"
 
 printDecl :: Decl -> String
-printDecl (DeclBinOp name ty binop) = declString name (annot (printBinOp binop) ty)
+printDecl (DeclBinOp name ty binop) = declString name (annot (printBinOp ty binop) ty)
 printDecl (DeclCall name ty call) = declString name (annot (printCall call) ty)
 printDecl (DeclIcmp name ty icmp) = declString name (annot (printIcmp icmp) ty)
 printDecl (DeclSelect name ty select) = declString name (annot (printSelect select) ty)
@@ -64,9 +65,11 @@ printDecl (DeclFreeze name ty value) = declString name (annot (printValue value)
 annot :: String -> Ty -> String
 annot expr ty = printf "(%s) :: %s" expr (rho ty)
 
+-- An @icmp@\/@fcmp@ result is a 'Bool' (its 'DeclIcmp' 'Ty' is 'TyBool', so the
+-- enclosing 'annot' pins @:: Bool@); emit the bare comparison and let the branch
+-- / select / return that consumes it use it directly.
 printIcmp :: Icmp -> String
-printIcmp (Icmp cmp ty a b) =
-  printf "if %s then 1 else 0" (cmpExpr ty cmp (printValue a) (printValue b))
+printIcmp (Icmp cmp ty a b) = cmpExpr ty cmp (printValue a) (printValue b)
 
 -- | The Haskell boolean expression for a comparison predicate.
 --
@@ -94,10 +97,18 @@ cmpExpr ty cmp a b
     unordered :: String -> String
     unordered op = printf "isNaN %s || isNaN %s || %s %s %s" a b a op b
 
+-- The select condition is an i1 ('Bool'), so it drives @if@ directly.
 printSelect :: Select -> String
-printSelect (Select a b c) = printf "if %s /= 0 then %s else %s" (printValue a) (printValue b) (printValue c)
+printSelect (Select a b c) = printf "if %s then %s else %s" (printValue a) (printValue b) (printValue c)
 
 printConvOp :: ConvOp -> String
+-- An i1 ('Bool') source: clang's @zext i1@\/@sext i1@ reintroduce the integer
+-- 0/1 (or 0/-1 for sext) that a comparison result is widened back into. This is
+-- the Bool->int boundary coercion; widths play no role, so it precedes the
+-- width-driven cases below.
+printConvOp (ConvOp op TyBool tgt value) =
+  printf "(if %s then %s else 0) :: %s" (printValue value) trueVal (rho tgt)
+  where trueVal = if op == "sext" then "(-1)" else "1" :: String
 printConvOp (ConvOp op src tgt value) = case op of
   -- zext / uitofp zero-extend the source: round-trip through its unsigned word
   -- type first, so the sign bit is not propagated.
@@ -117,19 +128,34 @@ printConvOp (ConvOp op src tgt value) = case op of
     tgtTy = rho tgt
     wordOf = widthToWordType . widthOf
 
-printBinOp :: BinOp -> String
-printBinOp (BinOp op left right) = printValue left ++ translateOperator op ++ rhs
+-- The 'Ty' selects the boolean reading of @and@\/@or@\/@xor@ on i1 operands:
+-- on 'TyBool' they are the logical connectives (@&&@\/@||@\/@\/=@), not the
+-- 'Data.Bits' word operators their integer counterparts use.
+printBinOp :: Ty -> BinOp -> String
+printBinOp TyBool (BinOp op left right)
+  | op `elem` ["and", "or", "xor"] = printValue left ++ boolOperator op ++ printValue right
+printBinOp _ (BinOp op left right) = printValue left ++ translateOperator op ++ rhs
   where
     -- Haskell's shift functions take the amount as `Int`, but LLVM types both
     -- shift operands at the same iN, so the (sized) amount needs coercing.
     rhs | op `elem` ["shl", "lshr", "ashr"] = "(fromIntegral " ++ printValue right ++ ")"
         | otherwise                         = printValue right
 
+-- | The Haskell logical connective for an @i1@ @and@\/@or@\/@xor@. @xor@ on
+-- 'Bool' is inequality (@\/=@), which is also how clang spells logical negation
+-- (@xor i1 %c, true@ == @c \/= True@ == @not c@).
+boolOperator :: String -> String
+boolOperator "and" = " && "
+boolOperator "or"  = " || "
+boolOperator "xor" = " /= "
+boolOperator op    = error ("boolOperator: not a boolean op: " ++ op)
+
 printValue :: Value -> String
 printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c
 -- A floating literal is always parenthesised and explicitly typed, so it is
 -- unambiguous as an operand/argument and pins Float vs Double (no defaulting).
 printValue (FConst txt ty) = printf "(%s :: %s)" txt (rho ty)
+printValue (BConst b) = if b then "True" else "False"
 printValue (Name n) = n
 printValue Unit = "()"
 
@@ -149,8 +175,9 @@ functionString = printf "%s %s=\n  let\n%s  in %s ()\n"
 blockString :: Int -> String -> String -> String -> String -> String -> String
 blockString level = printf (indentEach level ["%s %s=\n", "  let\n%s%s%s"])
 
+-- A conditional @br@ tests an i1 ('Bool') condition, so it drives @if@ directly.
 condString :: Int -> String -> String -> String -> String
-condString l = printf (indentEach l ["in if %s /= 0\n", "  then %s\n", "  else %s\n"])
+condString l = printf (indentEach l ["in if %s\n", "  then %s\n", "  else %s\n"])
 
 declString :: String -> String -> String
 declString = printf "%s = %s\n"

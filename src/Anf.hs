@@ -94,6 +94,9 @@ data Value
   -- | A floating constant: the (Haskell-renderable) literal text and its 'Ty'
   -- (so the printer emits @Float@ vs @Double@ and an explicitly-typed literal).
   | FConst String Ty
+  -- | A boolean constant, from an @i1@ literal (LLVM @true@\/@false@). Printed
+  -- bare as @True@\/@False@.
+  | BConst Bool
   | Name String
   | Unit
   deriving (Show, Eq)

@@ -81,6 +81,7 @@ test-suite llvm-ir-to-functional-test
   main-is: Main.hs
   other-modules:
       BitWidthSpec
+      BooleanSpec
       ExamplesSpec
       FloatingSpec
       LexerSpec

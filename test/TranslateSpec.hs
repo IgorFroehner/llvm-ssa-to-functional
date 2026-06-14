@@ -103,7 +103,8 @@ spec = parallel $ do
     it "leaves non-intrinsic same-module calls untouched" $
       emit plainCall `shouldSatisfy` isInfixOf "helper ax"
 
-    it "keeps an i1-returning icmp as a faithful 0/1 Int8" $ do
+    it "translates an i1-returning icmp to a Haskell Bool" $ do
       let out = emit "define i1 @is_positive(i32 %x) {\n  %2 = icmp sgt i32 %x, 0\n  ret i1 %2\n}\n"
-      out `shouldSatisfy` isInfixOf "is_positive :: Int32 -> Int8"
-      out `shouldSatisfy` isInfixOf "if ax > 0 then 1 else 0"
+      out `shouldSatisfy` isInfixOf "is_positive :: Int32 -> Bool"
+      out `shouldSatisfy` isInfixOf "(ax > 0) :: Bool"
+      out `shouldSatisfy` (not . isInfixOf "then 1 else 0")

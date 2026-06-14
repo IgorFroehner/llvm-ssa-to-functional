@@ -4,10 +4,11 @@
 -- place a 'Ty' becomes a Haskell type), not type inference.
 --
 -- The lattice is intentionally wider than the integer-only past: 'TyFloat' /
--- 'TyDouble' are introduced here for floating-point support, and 'TyBool' is
--- wired in but dormant (i1 still elaborates to @TyInt 1@) so the i1-as-Bool
--- refinement is a localized follow-up rather than a refactor. See
--- docs/roadmap/plans/09-floating-point.md.
+-- 'TyDouble' carry floating-point support, and 'TyBool' carries the i1-as-Bool
+-- translation: @i1@ elaborates to 'TyBool', so an LLVM comparison result is a
+-- Haskell 'Bool' fed straight into 'if', and an @i1@ return type prints @Bool@.
+-- See docs/roadmap/plans/09-floating-point.md §7 and
+-- docs/roadmap/10-boolean-types.md.
 module TypeSystem
   ( Ty(..)
   , elaborate
@@ -24,7 +25,7 @@ data Ty
   = TyInt Int   -- ^ @iN@ (1..64 in subset)
   | TyFloat     -- ^ LLVM @float@  — IEEE-754 binary32 — Haskell 'Float'
   | TyDouble    -- ^ LLVM @double@ — IEEE-754 binary64 — Haskell 'Double'
-  | TyBool      -- ^ i1-as-Bool. Dormant until the boolean-types item.
+  | TyBool      -- ^ @i1@ — IEEE has no part here; this is LLVM's boolean.
   | TyUnit      -- ^ LLVM @void@
   deriving (Eq, Show)
 
@@ -34,6 +35,7 @@ elaborate :: String -> Ty
 elaborate "void"   = TyUnit
 elaborate "float"  = TyFloat
 elaborate "double" = TyDouble
+elaborate "i1"     = TyBool
 elaborate s        = TyInt (llvmIntWidth s)  -- errors if not an @iN@
 
 -- | The Haskell type a 'Ty' is represented by. Integer widths round /up/ to the

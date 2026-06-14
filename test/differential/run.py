@@ -47,7 +47,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 EXAMPLES = os.path.join(ROOT, "examples")
 
 # C type for each LLVM type we accept. Integer widths are read through C's
-# ``int``/``long long``; an ``i1`` (0/1 bool return) rides in an ``int`` too.
+# ``int``/``long long``; an ``i1`` (0/1 bool return) rides in an ``int`` on the
+# native side, while the pipeline returns a Haskell ``Bool`` mapped back to 0/1
+# (see ``build_pipeline``).
 # ``float``/``double`` are the IEEE types; results are compared by their raw bit
 # pattern (see ``build_native``/``build_pipeline``), so the comparison is exact
 # and NaN-robust. ``void`` carries no value: a void case only certifies both
@@ -276,6 +278,10 @@ def build_pipeline(c, workdir):
         cast = "castDoubleToWord64" if c["ret"] == "double" else "castFloatToWord32"
         result = (f"let _r = {call} in "
                   f'if isNaN _r then putStrLn "nan" else print ({cast} _r)')
+    elif c["ret"] == "i1":
+        # An i1 return is a Haskell Bool (the i1-aware translation); the native
+        # side prints the C _Bool as 0/1, so map True/False the same way.
+        result = f"print (if {call} then 1 else 0 :: Integer)"
     else:
         result = f"print (fromIntegral ({call}) :: Integer)"
     src += (

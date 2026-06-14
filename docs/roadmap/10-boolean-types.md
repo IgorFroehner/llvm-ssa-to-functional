@@ -3,7 +3,7 @@ type: enhancement
 title: i1-aware Bool (idiomatic boolean output)
 impact: low
 effort: medium
-status: proposed
+status: done
 ---
 
 Today every `icmp` is re-encoded as `if … then 1 else 0` and every conditional
