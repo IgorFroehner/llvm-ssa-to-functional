@@ -84,6 +84,7 @@ test-suite llvm-ir-to-functional-test
       ExamplesSpec
       FloatingSpec
       LexerSpec
+      NameNormalizerSpec
       ParserSpec
       Spec
       TranslateSpec

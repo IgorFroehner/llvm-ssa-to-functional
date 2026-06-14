@@ -99,11 +99,11 @@ tokens :-
 <0> to          { tok To }
 
 -- Beginning of a block. Clang emits named labels containing '.'
--- (e.g. @for.cond.cleanup:@); normalizeName (removePunc) strips the '.' so the
--- def and its @%for.cond.cleanup@ reference collapse to the same identifier.
--- '$' is deliberately not accepted: clang does not emit it in labels and
--- removePunc does not strip it, so it could not be made a valid identifier.
-<0> ([a-zA-Z_0-9\.])+ ":" { createToken BasicBlock }
+-- (e.g. @for.cond.cleanup:@), and LLVM also admits '$'; normalizeName
+-- (removePunc) strips both, so a label and its @%for.cond.cleanup@ reference
+-- collapse to the same valid Haskell identifier (matching @local_id@/@global_id@,
+-- which accept the same characters).
+<0> ([a-zA-Z_0-9\.\$])+ ":" { createToken BasicBlock }
 
 -- Identifiers
 <0> @global_id     { createToken GIdentifier }

@@ -36,11 +36,15 @@ normalizeGlobal name =
 normalizeBlockName :: ByteString -> String
 normalizeBlockName name = "f" ++ removePunc (unpack name)
 
+-- | Strip the punctuation the lexer admits inside LLVM identifiers, leaving a
+-- valid Haskell identifier body. Covers every such character: the sigils
+-- (@%@\/@\@@), the dotted/dollar name chars LLVM allows in locals, globals and
+-- block labels (@.@\/@$@ — e.g. @%for.cond@, @\@foo$bar@), and the label colon.
 removePunc :: String -> String
 removePunc = filter (`notElem` punctuation)
   where
     punctuation :: [Char]
-    punctuation = ",.?!-:;\"'%@"
+    punctuation = ",.?!-:;\"'%@$"
 
 unpack :: LBS.ByteString -> String
 unpack = LBS.unpack
