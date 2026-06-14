@@ -26,9 +26,12 @@ source-repository head
 library
   exposed-modules:
       Anf
+      AnnotDump
       Ast
       AstHelpers
+      Backend
       Dominance
+      Effect
       GraphViz
       Lexer
       NameNormalizer
@@ -80,6 +83,7 @@ test-suite llvm-ir-to-functional-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      AnnotatedSpec
       BitWidthSpec
       BooleanSpec
       ExamplesSpec

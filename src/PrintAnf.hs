@@ -1,14 +1,21 @@
-{-# LANGUAGE GADTs #-}
-
-module PrintAnf (printProgram) where
+module PrintAnf (printProgram, haskellBackend) where
 
 import Data.List (intercalate)
 
 import Anf
+import Backend (Backend(..))
 import TranslateAux
 import TypeSystem (Ty(..), rho, widthOf, isFloating)
 
 import Text.Printf (printf)
+
+-- | The Haskell source backend. It is /annotation-blind/: 'printProgram' is
+-- parameterised over the annotation type and never inspects it, so by naturality
+-- (plan §2.4, T1) it renders an annotated tree exactly as it renders the bare
+-- one. Hence the same printer serves @'Anf.Program' 'Effect'@ here and the
+-- @'Anf.Program' ()@ produced straight out of "Translate" in tests.
+haskellBackend :: Backend
+haskellBackend = Backend { backendName = "haskell", render = printProgram }
 
 header :: String
 header = "import Data.Bits\n\
@@ -16,23 +23,23 @@ header = "import Data.Bits\n\
          \import Data.Word\n\
          \import GHC.Float (float2Double, double2Float)\n\n"
 
-printProgram :: Program -> String
+printProgram :: Program a -> String
 printProgram (Program functions) = header ++ intercalate "\n\n" (map printFunction functions)
 
-printFunction :: Function -> String
-printFunction (Function name args argTypes retType lambda call) =
+printFunction :: Function a -> String
+printFunction (Function _ name args argTypes retType lambda call) =
   let
     functionArgs = unrollArguments args
     firstBlockLabel = printCall call
     signature = signatureString name (intercalate " -> " (map rho (argTypes ++ [retType])))
   in signature ++ functionString name functionArgs (printLet lambda 2) firstBlockLabel
 
-unrollArguments :: [ArgumentDef] -> String
-unrollArguments ((ArgumentDef name):x) = name ++ " " ++ unrollArguments x
+unrollArguments :: [ArgumentDef a] -> String
+unrollArguments ((ArgumentDef _ name):x) = name ++ " " ++ unrollArguments x
 unrollArguments [] = ""
 
-printLet :: Lambda -> Int -> String
-printLet (Lambda name args exprs lets flow) level =
+printLet :: Lambda a -> Int -> String
+printLet (Lambda _ name args exprs lets flow) level =
   let
     lambdaArgs = unrollArguments args
     bindings = concatMap (`printExpr` (level + 2)) exprs
@@ -40,26 +47,26 @@ printLet (Lambda name args exprs lets flow) level =
     tailCall = printTailCall flow (level + 1)
   in blockString level name lambdaArgs bindings nestedLambdas tailCall
 
-printExpr :: Expr -> Int -> String
+printExpr :: Expr a -> Int -> String
 printExpr (ExpDecl decl) l = indent l $ printDecl decl
 -- printExpr (ExpCall call) l = indent l $ printCall call
 
-printCall :: Call -> String
-printCall (Call (Name fname) values) = fname ++ " " ++ unwords (map printValue values)
-printCall (Call (Const value) _) = show value
-printCall (Call c@(FConst _ _) _) = printValue c
-printCall (Call c@(BConst _) _) = printValue c
-printCall (Call Unit _) = "()"
+printCall :: Call a -> String
+printCall (Call _ (Name _ fname) values) = fname ++ " " ++ unwords (map printValue values)
+printCall (Call _ (Const _ value) _) = show value
+printCall (Call _ c@(FConst {}) _) = printValue c
+printCall (Call _ c@(BConst _ _) _) = printValue c
+printCall (Call _ (Unit _) _) = "()"
 
-printDecl :: Decl -> String
-printDecl (DeclBinOp name ty binop) = declString name (annot (printBinOp ty binop) ty)
-printDecl (DeclCall name ty call) = declString name (annot (printCall call) ty)
-printDecl (DeclIcmp name ty icmp) = declString name (annot (printIcmp icmp) ty)
-printDecl (DeclSelect name ty select) = declString name (annot (printSelect select) ty)
+printDecl :: Decl a -> String
+printDecl (DeclBinOp _ name ty binop) = declString name (annot (printBinOp ty binop) ty)
+printDecl (DeclCall _ name ty call) = declString name (annot (printCall call) ty)
+printDecl (DeclIcmp _ name ty icmp) = declString name (annot (printIcmp icmp) ty)
+printDecl (DeclSelect _ name ty select) = declString name (annot (printSelect select) ty)
 -- A conv op already names its target type, so it is not wrapped again.
-printDecl (DeclConvOp name convop) = declString name (printConvOp convop)
+printDecl (DeclConvOp _ name convop) = declString name (printConvOp convop)
 -- freeze is the identity: emit a typed alias @name = (value) :: IntN@.
-printDecl (DeclFreeze name ty value) = declString name (annot (printValue value) ty)
+printDecl (DeclFreeze _ name ty value) = declString name (annot (printValue value) ty)
 
 -- | Pin a binding's result type: @(expr) :: Int32@.
 annot :: String -> Ty -> String
@@ -68,8 +75,8 @@ annot expr ty = printf "(%s) :: %s" expr (rho ty)
 -- An @icmp@\/@fcmp@ result is a 'Bool' (its 'DeclIcmp' 'Ty' is 'TyBool', so the
 -- enclosing 'annot' pins @:: Bool@); emit the bare comparison and let the branch
 -- / select / return that consumes it use it directly.
-printIcmp :: Icmp -> String
-printIcmp (Icmp cmp ty a b) = cmpExpr ty cmp (printValue a) (printValue b)
+printIcmp :: Icmp a -> String
+printIcmp (Icmp _ cmp ty a b) = cmpExpr ty cmp (printValue a) (printValue b)
 
 -- | The Haskell boolean expression for a comparison predicate.
 --
@@ -98,18 +105,18 @@ cmpExpr ty cmp a b
     unordered op = printf "isNaN %s || isNaN %s || %s %s %s" a b a op b
 
 -- The select condition is an i1 ('Bool'), so it drives @if@ directly.
-printSelect :: Select -> String
-printSelect (Select a b c) = printf "if %s then %s else %s" (printValue a) (printValue b) (printValue c)
+printSelect :: Select a -> String
+printSelect (Select _ a b c) = printf "if %s then %s else %s" (printValue a) (printValue b) (printValue c)
 
-printConvOp :: ConvOp -> String
+printConvOp :: ConvOp a -> String
 -- An i1 ('Bool') source: clang's @zext i1@\/@sext i1@ reintroduce the integer
 -- 0/1 (or 0/-1 for sext) that a comparison result is widened back into. This is
 -- the Bool->int boundary coercion; widths play no role, so it precedes the
 -- width-driven cases below.
-printConvOp (ConvOp op TyBool tgt value) =
+printConvOp (ConvOp _ op TyBool tgt value) =
   printf "(if %s then %s else 0) :: %s" (printValue value) trueVal (rho tgt)
   where trueVal = if op == "sext" then "(-1)" else "1" :: String
-printConvOp (ConvOp op src tgt value) = case op of
+printConvOp (ConvOp _ op src tgt value) = case op of
   -- zext / uitofp zero-extend the source: round-trip through its unsigned word
   -- type first, so the sign bit is not propagated.
   "zext"    -> printf "fromIntegral (fromIntegral %s :: %s) :: %s" v (wordOf src) tgtTy
@@ -131,10 +138,10 @@ printConvOp (ConvOp op src tgt value) = case op of
 -- The 'Ty' selects the boolean reading of @and@\/@or@\/@xor@ on i1 operands:
 -- on 'TyBool' they are the logical connectives (@&&@\/@||@\/@\/=@), not the
 -- 'Data.Bits' word operators their integer counterparts use.
-printBinOp :: Ty -> BinOp -> String
-printBinOp TyBool (BinOp op left right)
+printBinOp :: Ty -> BinOp a -> String
+printBinOp TyBool (BinOp _ op left right)
   | op `elem` ["and", "or", "xor"] = printValue left ++ boolOperator op ++ printValue right
-printBinOp _ (BinOp op left right) = printValue left ++ translateOperator op ++ rhs
+printBinOp _ (BinOp _ op left right) = printValue left ++ translateOperator op ++ rhs
   where
     -- Haskell's shift functions take the amount as `Int`, but LLVM types both
     -- shift operands at the same iN, so the (sized) amount needs coercing.
@@ -150,21 +157,21 @@ boolOperator "or"  = " || "
 boolOperator "xor" = " /= "
 boolOperator op    = error ("boolOperator: not a boolean op: " ++ op)
 
-printValue :: Value -> String
-printValue (Const c) = if c < 0 then "(" ++ show c ++ ")" else show c
+printValue :: Value a -> String
+printValue (Const _ c) = if c < 0 then "(" ++ show c ++ ")" else show c
 -- A floating literal is always parenthesised and explicitly typed, so it is
 -- unambiguous as an operand/argument and pins Float vs Double (no defaulting).
-printValue (FConst txt ty) = printf "(%s :: %s)" txt (rho ty)
-printValue (BConst b) = if b then "True" else "False"
-printValue (Name n) = n
-printValue Unit = "()"
+printValue (FConst _ txt ty) = printf "(%s :: %s)" txt (rho ty)
+printValue (BConst _ b) = if b then "True" else "False"
+printValue (Name _ n) = n
+printValue (Unit _) = "()"
 
-printTailCall :: Flow -> Int -> String
+printTailCall :: Flow a -> Int -> String
 printTailCall (FlowCall call) l = indent l "in " ++ printCall call ++ "\n"
 printTailCall (FlowCond cond) l = printCond cond l
 
-printCond :: IfThenElse -> Int -> String
-printCond (IfThenElse cond thenCall elseCall) l = condString l (printValue cond) (printCall thenCall) (printCall elseCall)
+printCond :: IfThenElse a -> Int -> String
+printCond (IfThenElse _ cond thenCall elseCall) l = condString l (printValue cond) (printCall thenCall) (printCall elseCall)
 
 signatureString :: String -> String -> String
 signatureString = printf "%s :: %s\n"
